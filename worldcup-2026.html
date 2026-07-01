@@ -36,6 +36,10 @@ body {
 .header .meta { margin-left: auto; font-size: 10px; color: var(--text-secondary); display: flex; align-items: center; gap: 12px; }
 .badge { background: var(--bg-card); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; font-size: 9px; }
 .badge.live { border-color: var(--live); color: var(--live); display: none; }
+.lang-switch { display: flex; gap: 2px; margin-left: 4px; }
+.lang-switch button { background: var(--bg-panel); color: var(--text-secondary); border: 1px solid var(--border); padding: 2px 6px; border-radius: 3px; cursor: pointer; font-size: 10px; font-family: inherit; transition: all 0.2s; }
+.lang-switch button:hover { border-color: var(--accent); color: var(--text-primary); }
+.lang-switch button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
 
 /* ===== TABS ===== */
 .tabs { display: flex; gap: 2px; margin-left: 24px; }
@@ -322,22 +326,23 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
 
 <!-- HEADER -->
 <div class="header">
-  <span class="title">🏆 2026 世界盃淘汰賽</span>
+  <span class="title" data-i18n="title">🏆 2026 世界盃淘汰賽</span>
   <div class="tabs">
-    <div class="tab active" data-tab="bracket" onclick="switchTab('bracket')">🏟️ 對陣圖</div>
-    <div class="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 賽程列表</div>
-    <div class="tab" data-tab="support" onclick="switchTab('support')">❤️ 支持創作者</div>
+    <div class="tab active" data-tab="bracket" onclick="switchTab('bracket')" data-i18n="tabBracket">🏟️ 對陣圖</div>
+    <div class="tab" data-tab="schedule" onclick="switchTab('schedule')" data-i18n="tabSchedule">📅 賽程列表</div>
+    <div class="tab" data-tab="support" onclick="switchTab('support')" data-i18n="tabSupport">❤️ 支持創作者</div>
   </div>
   <div class="meta">
     <span class="badge live" id="liveBadge">🔴 LIVE</span>
     <span id="updateTime"></span>
     <span id="nextUpdate"></span>
+    <span class="lang-switch"><button data-lang="zh-TW" onclick="setLang('zh-TW')">繁</button><button data-lang="zh-CN" onclick="setLang('zh-CN')">简</button><button data-lang="en" onclick="setLang('en')">EN</button></span>
   </div>
 </div>
 
 <!-- BRACKET VIEW (full screen) -->
 <div class="bracket-fullscreen" id="bracketView">
-  <div class="bt-time-note">⏰ 以下比賽時間均爲北京時間 (UTC+8)</div>
+  <div class="bt-time-note" data-i18n="timeNote">⏰ 以下比賽時間均爲北京時間 (UTC+8)</div>
   <div class="bracket-scroll" id="bracketScroll"></div>
 </div>
 
@@ -347,10 +352,10 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
   <div class="map-panel">
     <div id="map"></div>
     <div class="map-legend">
-      <span class="legend-item"><span class="legend-dot" style="background:#3fb950"></span>已完賽</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#f0883e"></span>進行中</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#8b949e"></span>即將</span>
-      <span class="legend-item"><span class="legend-dot" style="background:#58a6ff"></span>決賽</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#3fb950"></span><span data-i18n="legendCompleted">已完賽</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#f0883e"></span><span data-i18n="legendLive">進行中</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#8b949e"></span><span data-i18n="legendUpcoming">即將</span></span>
+      <span class="legend-item"><span class="legend-dot" style="background:#58a6ff"></span><span data-i18n="legendFinal">決賽</span></span>
     </div>
   </div>
 </div>
@@ -359,19 +364,19 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
 <div class="support-container" id="supportView" style="display:none;">
   <div class="support-card">
     <div class="support-icon">❤️</div>
-    <h2>支持創作者</h2>
-    <p class="support-desc">
+    <h2 data-i18n="supportTitle">支持創作者</h2>
+    <p class="support-desc" data-i18n="supportDesc1">
       本站由獨立開發者用愛發電維護，致力於爲球迷提供沉浸式的世界盃可視化追蹤體驗。
     </p>
-    <p class="support-desc">
+    <p class="support-desc" data-i18n="supportDesc2">
       如果你覺得這個工具對你有幫助，歡迎請創作者喝杯咖啡 ☕
       每一份支持都是持續更新與優化的動力。
     </p>
-    <a class="support-btn" href="https://ifdian.net/a/janvis" target="_blank" rel="noopener">
+    <a class="support-btn" id="supportBtnLink" data-i18n="supportBtn" data-i18n-href="supportBtnUrl" href="https://ifdian.net/a/janvis" target="_blank" rel="noopener">
       💝 前往支持頁面
     </a>
-    <p class="support-url">https://ifdian.net/a/janvis</p>
-    <p class="support-thanks">感謝每一位支持的朋友，你的鼓勵是我最大的動力 🙏</p>
+    <p class="support-url" id="supportUrlText">https://ifdian.net/a/janvis</p>
+    <p class="support-thanks" data-i18n="supportThanks">感謝每一位支持的朋友，你的鼓勵是我最大的動力 🙏</p>
   </div>
 </div>
 <div class="modal-overlay" id="modalOverlay" style="display:none">
@@ -380,6 +385,159 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// ==================== I18N ====================
+const I18N = {
+'zh-TW':{
+title:'🏆 2026 世界盃淘汰賽',tabBracket:'🏟️ 對陣圖',tabSchedule:'📅 賽程列表',tabSupport:'❤️ 支持創作者',
+liveBadge:'🔴 LIVE',timeNote:'⏰ 以下比賽時間均爲北京時間 (UTC+8)',
+legendCompleted:'已完賽',legendLive:'進行中',legendUpcoming:'即將',legendFinal:'決賽',
+supportTitle:'支持創作者',supportDesc1:'本站由獨立開發者用愛發電維護，致力於爲球迷提供沉浸式的世界盃可視化追蹤體驗。',
+supportDesc2:'如果你覺得這個工具對你有幫助，歡迎請創作者喝杯咖啡 ☕ 每一份支持都是持續更新與優化的動力。',
+supportBtn:'💝 前往支持頁面',supportUrl:'https://ifdian.net/a/janvis',supportThanks:'感謝每一位支持的朋友，你的鼓勵是我最大的動力 🙏',
+disclaimer:'免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。',
+updateLabel:'數據',nextUpdateLabel:'下次更新',allDone:'全部比賽已結束',nextMatch:'下一場',
+beijingTime:'北京時間',localTime:'當地時間',msgLoaded:'✅ 已從服務器加載最新數據',msgOffline:'⚠️ 無法連接服務器，使用內聯數據',
+titleBaseCamp:'小組賽統計',titleDist:'行軍距離（酒店 → 球場）',titleKo':'已完賽淘汰賽',titleSrc:'數據溯源',
+roundR32:'32強',roundR16:'16強',roundQF:'¼決賽',roundSF:'半決賽',roundTP:'三四名',roundFinal:'決賽',
+groupStage:'小組賽',pending:'待定',ft:'FT',vs:'vs',loadingWeather:'加載天氣...',weatherNA:'天氣暫不可用',
+weatherFail:'天氣加載失敗',noHistWeather:'暫無歷史天氣數據',matchDayWeather:'比賽日天氣',
+sameStadiumBadge:'⭐ 下一場同場',hotelLabel:'球隊酒店',
+preMatch:'賽前',dailySummary:'每日彙總',
+win:'勝',draw:'平',loss:'負', goalsFor:'進',goalsAgainst:'失',pts:'分',
+flightHours:'飛行',driveHours:'駕車',about:'約',hours:'小時',
+teams:{'Germany':'德國','Paraguay':'巴拉圭','France':'法國','Sweden':'瑞典','South Africa':'南非','Canada':'加拿大','Netherlands':'荷蘭','Morocco':'摩洛哥','Portugal':'葡萄牙','Croatia':'克羅地亞','Spain':'西班牙','Austria':'奧地利','United States':'美國','Bosnia & Herzegovina':'波黑','Belgium':'比利時','Senegal':'塞內加爾','Brazil':'巴西','Japan':'日本','Ivory Coast':'科特迪瓦','Norway':'挪威','Mexico':'墨西哥','Ecuador':'厄瓜多爾','England':'英格蘭','DR Congo':'剛果(金)','Argentina':'阿根廷','Cape Verde':'佛得角','Australia':'澳大利亞','Egypt':'埃及','Switzerland':'瑞士','Algeria':'阿爾及利亞','Colombia':'哥倫比亞','Ghana':'加納','Korea Republic':'韓國','Czech Republic':'捷克','Qatar':'卡塔爾','Curacao':'庫拉索','Haiti':'海地','Scotland':'蘇格蘭','Tunisia':'突尼斯','Iraq':'伊拉克','Uzbekistan':'烏茲別克斯坦','Panama':'巴拿馬','Jordan':'約旦','New Zealand':'新西蘭','Saudi Arabia':'沙特阿拉伯','Uruguay':'烏拉圭','Turkey':'土耳其','Iran':'伊朗'},
+venues:{azteca:'阿茲特克球場',bbva:'BBVA球場',akron:'阿克隆球場',metlife:'大都會人壽球場',att:'AT&T球場',mercedes:'梅賽德斯-奔馳球場',sofi:'SoFi球場',nrg:'NRG球場',arrowhead:'箭頭球場',gillette:'吉列球場',levis:'李維斯球場',lumen:'流明球場',lincoln:'林肯金融球場',hardrock:'硬石球場',bcplace:'BC Place',bmofield:'BMO球場'},
+states:{NJ:'新澤西州',TX:'得克薩斯州',GA:'佐治亞州',CA:'加利福尼亞州',MO:'密蘇里州',MA:'馬薩諸塞州',WA:'華盛頓州',PA:'賓夕法尼亞州',FL:'佛羅里達州',BC:'不列顛哥倫比亞省',ON:'安大略省'},
+weekdays:['週日','週一','週二','週三','週四','週五','週六'],
+rounds:{'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'},
+weather:{0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'},
+weatherText:{'Sunny':'晴','Clear':'晴','Partly cloudy':'少雲','Partly Cloudy':'少雲','Cloudy':'多雲','Overcast':'陰天','Mist':'霧','Fog':'霧','Foggy':'霧','Light drizzle':'小毛毛雨','Patchy light drizzle':'小毛毛雨','Light rain':'小雨','Light Rain':'小雨','Patchy light rain':'小雨','Patchy rain possible':'可能有陣雨','Moderate rain':'中雨','Moderate rain at times':'間歇中雨','Heavy rain':'大雨','Heavy rain at times':'間歇大雨','Light snow':'小雪','Moderate snow':'中雪','Heavy snow':'大雪','Patchy light snow':'小陣雪','Patchy moderate snow':'中陣雪','Thunderstorm':'雷暴','Thundery outbreaks possible':'可能有雷暴','Freezing fog':'凍霧','Ice pellets':'冰粒','Light rain shower':'小陣雨','Moderate or heavy rain shower':'大陣雨','Light sleet':'小凍雨','Moderate or heavy sleet':'大凍雨','Blizzard':'暴風雪','Blowing snow':'吹雪','Torrential rain shower':'暴雨'},
+supportBtnUrl:'https://ifdian.net/a/janvis',
+},
+'zh-CN':{
+title:'🏆 2026 世界杯淘汰赛',tabBracket:'🏟️ 对阵图',tabSchedule:'📅 赛程列表',tabSupport:'❤️ 支持创作者',
+liveBadge:'🔴 LIVE',timeNote:'⏰ 以下比赛时间均为北京时间 (UTC+8)',
+legendCompleted:'已完赛',legendLive:'进行中',legendUpcoming:'即将',legendFinal:'决赛',
+supportTitle:'支持创作者',supportDesc1:'本站由独立开发者用爱发电维护，致力于为球迷提供沉浸式的世界杯可视化追踪体验。',
+supportDesc2:'如果你觉得这个工具对你有帮助，欢迎请创作者喝杯咖啡 ☕ 每一份支持都是持续更新与优化的动力。',
+supportBtn:'💝 前往支持页面',supportUrl:'https://ifdian.net/a/janvis',supportThanks:'感谢每一位支持的朋友，你的鼓励是我最大的动力 🙏',
+disclaimer:'免责声明：本站数据来源于互联网公开信息，仅供球迷参考与可视化追踪，不保证其完整性与准确性，亦不承担由此产生的任何责任。',
+updateLabel:'数据',nextUpdateLabel:'下次更新',allDone:'全部比赛已结束',nextMatch:'下一场',
+beijingTime:'北京时间',localTime:'当地时间',msgLoaded:'✅ 已从服务器加载最新数据',msgOffline:'⚠️ 无法连接服务器，使用内联数据',
+titleBaseCamp:'小组赛统计',titleDist:'行军距离（酒店 → 球场）',titleKo:'已完赛淘汰赛',titleSrc:'数据溯源',
+roundR32:'32强',roundR16:'16强',roundQF:'¼决赛',roundSF:'半决赛',roundTP:'三四名',roundFinal:'决赛',
+groupStage:'小组赛',pending:'待定',ft:'FT',vs:'vs',loadingWeather:'加载天气...',weatherNA:'天气暂不可用',
+weatherFail:'天气加载失败',noHistWeather:'暂无历史天气数据',matchDayWeather:'比赛日天气',
+sameStadiumBadge:'⭐ 下一场同场',hotelLabel:'球队酒店',
+preMatch:'赛前',dailySummary:'每日汇总',
+win:'胜',draw:'平',loss:'负', goalsFor:'进',goalsAgainst:'失',pts:'分',
+flightHours:'飞行',driveHours:'驾车',about:'约',hours:'小时',
+teams:{'Germany':'德国','Paraguay':'巴拉圭','France':'法国','Sweden':'瑞典','South Africa':'南非','Canada':'加拿大','Netherlands':'荷兰','Morocco':'摩洛哥','Portugal':'葡萄牙','Croatia':'克罗地亚','Spain':'西班牙','Austria':'奥地利','United States':'美国','Bosnia & Herzegovina':'波黑','Belgium':'比利时','Senegal':'塞内加尔','Brazil':'巴西','Japan':'日本','Ivory Coast':'科特迪瓦','Norway':'挪威','Mexico':'墨西哥','Ecuador':'厄瓜多尔','England':'英格兰','DR Congo':'刚果(金)','Argentina':'阿根廷','Cape Verde':'佛得角','Australia':'澳大利亚','Egypt':'埃及','Switzerland':'瑞士','Algeria':'阿尔及利亚','Colombia':'哥伦比亚','Ghana':'加纳','Korea Republic':'韩国','Czech Republic':'捷克','Qatar':'卡塔尔','Curacao':'库拉索','Haiti':'海地','Scotland':'苏格兰','Tunisia':'突尼斯','Iraq':'伊拉克','Uzbekistan':'乌兹别克斯坦','Panama':'巴拿马','Jordan':'约旦','New Zealand':'新西兰','Saudi Arabia':'沙特阿拉伯','Uruguay':'乌拉圭','Turkey':'土耳其','Iran':'伊朗'},
+venues:{azteca:'阿兹特克球场',bbva:'BBVA球场',akron:'阿克隆球场',metlife:'大都会人寿球场',att:'AT&T球场',mercedes:'梅赛德斯-奔驰球场',sofi:'SoFi球场',nrg:'NRG球场',arrowhead:'箭头球场',gillette:'吉列球场',levis:'李维斯球场',lumen:'流明球场',lincoln:'林肯金融球场',hardrock:'硬石球场',bcplace:'BC Place',bmofield:'BMO球场'},
+states:{NJ:'新泽西州',TX:'得克萨斯州',GA:'佐治亚州',CA:'加利福尼亚州',MO:'密苏里州',MA:'马萨诸塞州',WA:'华盛顿州',PA:'宾夕法尼亚州',FL:'佛罗里达州',BC:'不列颠哥伦比亚省',ON:'安大略省'},
+weekdays:['周日','周一','周二','周三','周四','周五','周六'],
+rounds:{'Round of 32':'32强','Round of 16':'16强','Quarter-Final':'¼决赛','Semi-Final':'半决赛','Third Place':'三四名','Final':'决赛'},
+weather:{0:'晴',1:'大部晴',2:'少云',3:'阴天',45:'雾',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'阵雨',81:'中阵雨',82:'大阵雨',95:'雷暴',96:'雷暴+冰雹',99:'强雷暴+冰雹'},
+weatherText:{'Sunny':'晴','Clear':'晴','Partly cloudy':'少云','Partly Cloudy':'少云','Cloudy':'多云','Overcast':'阴天','Mist':'雾','Fog':'雾','Foggy':'雾','Light drizzle':'小毛毛雨','Patchy light drizzle':'小毛毛雨','Light rain':'小雨','Light Rain':'小雨','Patchy light rain':'小雨','Patchy rain possible':'可能有阵雨','Moderate rain':'中雨','Moderate rain at times':'间歇中雨','Heavy rain':'大雨','Heavy rain at times':'间歇大雨','Light snow':'小雪','Moderate snow':'中雪','Heavy snow':'大雪','Patchy light snow':'小阵雪','Patchy moderate snow':'中阵雪','Thunderstorm':'雷暴','Thundery outbreaks possible':'可能有雷暴','Freezing fog':'冻雾','Ice pellets':'冰粒','Light rain shower':'小阵雨','Moderate or heavy rain shower':'大阵雨','Light sleet':'小冻雨','Moderate or heavy sleet':'大冻雨','Blizzard':'暴风雪','Blowing snow':'吹雪','Torrential rain shower':'暴雨'},
+supportBtnUrl:'https://ifdian.net/a/janvis',
+},
+'en':{
+title:'🏆 2026 World Cup Knockout',tabBracket:'🏟️ Bracket',tabSchedule:'📅 Schedule',tabSupport:'❤️ Support',
+liveBadge:'🔴 LIVE',timeNote:'⏰ All times in Beijing Time (UTC+8)',
+legendCompleted:'Completed',legendLive:'Live',legendUpcoming:'Upcoming',legendFinal:'Final',
+supportTitle:'Support the Creator',supportDesc1:'This site is independently maintained by a solo developer, dedicated to providing an immersive World Cup visualization experience.',
+supportDesc2:'If you find this tool helpful, consider buying the creator a coffee ☕ Every bit of support fuels continued updates and improvements.',
+supportBtn:'💝 Sponsor on GitHub',supportUrl:'https://github.com/sponsors/sunlights2ai',supportThanks:'Thank you for your support — it means the world! 🙏',
+disclaimer:'Disclaimer: All data comes from publicly available internet sources, for fan reference and visualization only. No guarantee of completeness or accuracy. No liability assumed.',
+updateLabel:'Data',nextUpdateLabel:'Next Update',allDone:'All matches completed',nextMatch:'Next Match',
+beijingTime:'Beijing Time',localTime:'Local Time',msgLoaded:'✅ Latest data loaded from server',msgOffline:'⚠️ Cannot reach server, using cached data',
+titleBaseCamp:'Group Stage Record',titleDist:'Travel Distance (Hotel → Stadium)',titleKo:'Completed Knockout',titleSrc:'Data Sources',
+roundR32:'Round of 32',roundR16:'Round of 16',roundQF:'Quarter-Final',roundSF:'Semi-Final',roundTP:'Third Place',roundFinal:'Final',
+groupStage:'Group Stage',pending:'TBD',ft:'FT',vs:'vs',loadingWeather:'Loading weather...',weatherNA:'Weather unavailable',
+weatherFail:'Weather load failed',noHistWeather:'No historical weather data',matchDayWeather:'Match Day Weather',
+sameStadiumBadge:'⭐ Same Stadium Next',hotelLabel:'Team Hotel',
+preMatch:'Pre-Match',dailySummary:'Daily Summary',
+win:'W',draw:'D',loss:'L', goalsFor:'GF',goalsAgainst:'GA',pts:'Pts',
+flightHours:'flight',driveHours:'drive',about:'~',hours:'h',
+teams:{'Germany':'Germany','Paraguay':'Paraguay','France':'France','Sweden':'Sweden','South Africa':'South Africa','Canada':'Canada','Netherlands':'Netherlands','Morocco':'Morocco','Portugal':'Portugal','Croatia':'Croatia','Spain':'Spain','Austria':'Austria','United States':'United States','Bosnia & Herzegovina':'Bosnia & Herzegovina','Belgium':'Belgium','Senegal':'Senegal','Brazil':'Brazil','Japan':'Japan','Ivory Coast':'Ivory Coast','Norway':'Norway','Mexico':'Mexico','Ecuador':'Ecuador','England':'England','DR Congo':'DR Congo','Argentina':'Argentina','Cape Verde':'Cape Verde','Australia':'Australia','Egypt':'Egypt','Switzerland':'Switzerland','Algeria':'Algeria','Colombia':'Colombia','Ghana':'Ghana','Korea Republic':'Korea Republic','Czech Republic':'Czech Republic','Qatar':'Qatar','Curacao':'Curacao','Haiti':'Haiti','Scotland':'Scotland','Tunisia':'Tunisia','Iraq':'Iraq','Uzbekistan':'Uzbekistan','Panama':'Panama','Jordan':'Jordan','New Zealand':'New Zealand','Saudi Arabia':'Saudi Arabia','Uruguay':'Uruguay','Turkey':'Turkey','Iran':'Iran'},
+venues:{azteca:'Estadio Azteca',bbva:'Estadio BBVA',akron:'Estadio Akron',metlife:'MetLife Stadium',att:'AT&T Stadium',mercedes:'Mercedes-Benz Stadium',sofi:'SoFi Stadium',nrg:'NRG Stadium',arrowhead:'Arrowhead Stadium',gillette:'Gillette Stadium',levis:"Levi's Stadium",lumen:'Lumen Field',lincoln:'Lincoln Financial Field',hardrock:'Hard Rock Stadium',bcplace:'BC Place',bmofield:'BMO Field'},
+states:{NJ:'NJ',TX:'TX',GA:'GA',CA:'CA',MO:'MO',MA:'MA',WA:'WA',PA:'PA',FL:'FL',BC:'BC',ON:'ON'},
+weekdays:['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
+rounds:{'Round of 32':'Round of 32','Round of 16':'Round of 16','Quarter-Final':'Quarter-Final','Semi-Final':'Semi-Final','Third Place':'Third Place','Final':'Final'},
+weather:{0:'Clear',1:'Mostly Clear',2:'Partly Cloudy',3:'Overcast',45:'Fog',51:'Light Drizzle',53:'Drizzle',55:'Heavy Drizzle',61:'Light Rain',63:'Moderate Rain',65:'Heavy Rain',71:'Light Snow',73:'Moderate Snow',75:'Heavy Snow',80:'Showers',81:'Moderate Showers',82:'Heavy Showers',95:'Thunderstorm',96:'Thunderstorm+Hail',99:'Severe Thunderstorm'},
+weatherText:{},
+supportBtnUrl:'https://github.com/sponsors/sunlights2ai',
+}
+};
+let currentLang = (()=>{
+  const saved = localStorage.getItem('wc2026-lang');
+  if (saved && I18N[saved]) return saved;
+  const nav = navigator.language || '';
+  if (nav.startsWith('zh-Hant')||nav.startsWith('zh-TW')||nav.startsWith('zh-HK')) return 'zh-TW';
+  if (nav.startsWith('zh')) return 'zh-CN';
+  return 'en';
+})();
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('wc2026-lang', lang);
+  refreshI18n();
+}
+function T(key) { const d = I18N[currentLang]; return d[key] !== undefined ? d[key] : (I18N['zh-TW'][key] || key); }
+function teamName(en) { const d = I18N[currentLang]; return (d.teams && d.teams[en]) || en; }
+function venueName(id) {
+  const d = I18N[currentLang];
+  if (currentLang === 'en') return (d.venues && d.venues[id]) || id;
+  const v = VENUES.find(x => x.id === id);
+  const cn = (d.venues && d.venues[id]) || '';
+  return cn ? cn + '（' + (v ? v.name : '') + '）' : (v ? v.name : id);
+}
+function venueNameShort(v) { if(!v) return ''; const d=I18N[currentLang]; return (d.venues&&d.venues[v.id])||v.name; }
+function venueLocation(v) {
+  if(!v)return''; const d=I18N[currentLang];
+  let loc=v.city; if(v.state) loc+=', '+v.state+((d.states&&d.states[v.state])?'（'+d.states[v.state]+'）':'');
+  loc+=', '+v.country; return loc;
+}
+function weatherDesc(codeOrText) {
+  const d = I18N[currentLang];
+  if (typeof codeOrText === 'number') {
+    if (currentLang === 'en') return (d.weather && d.weather[codeOrText]) || 'Code '+codeOrText;
+    return (d.weather && d.weather[codeOrText]) || '碼'+codeOrText;
+  }
+  if (!codeOrText) return currentLang==='en' ? '--' : '--';
+  if (currentLang === 'en') return codeOrText;
+  const wt = d.weatherText;
+  if (!wt) return codeOrText;
+  for (const [k, v] of Object.entries(wt)) {
+    if (codeOrText.toLowerCase().includes(k.toLowerCase())) return v;
+  }
+  return codeOrText;
+}
+function wttrLangParam() { return (currentLang==='zh-TW'||currentLang==='zh-CN')?'&lang=zh':''; }
+function refreshI18n() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    const text = T(key);
+    if (text !== undefined) el.textContent = text;
+  });
+  document.querySelectorAll('[data-i18n-href]').forEach(el => {
+    el.href = T(el.getAttribute('data-i18n-href'));
+  });
+  document.querySelectorAll('.lang-switch button').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('data-lang') === currentLang);
+  });
+  const surl = document.getElementById('supportUrlText');
+  if (surl) surl.textContent = T('supportUrl');
+  const dln = document.getElementById('disclaimerLine');
+  if (dln) dln.textContent = T('disclaimer');
+  // Reload weather on map (language changed, weather labels may change)
+  if (map) { updateMapMarkers(); }
+  updateStatusIndicators();
+  renderBracketTree();
+  if (document.getElementById('scheduleView').style.display !== 'none') renderSchedule();
+  if (document.getElementById('bracketView').style.display !== 'none') setTimeout(drawBracketLines, 200);
+  document.getElementById('nextUpdate').textContent = T('allDone');
+}
+// ==================== DATA ====================
 // ==================== DATA ====================
 const COUNTRY_FLAGS = {
   'Germany':'de','Paraguay':'py','France':'fr','Sweden':'se',
@@ -391,17 +549,8 @@ const COUNTRY_FLAGS = {
   'Argentina':'ar','Cape Verde':'cv','Australia':'au','Egypt':'eg',
   'Switzerland':'ch','Algeria':'dz','Colombia':'co','Ghana':'gh'
 };
-const TEAM_NAMES_CN = {
-  'Germany':'德國','Paraguay':'巴拉圭','France':'法國','Sweden':'瑞典',
-  'South Africa':'南非','Canada':'加拿大','Netherlands':'荷蘭','Morocco':'摩洛哥',
-  'Portugal':'葡萄牙','Croatia':'克羅地亞','Spain':'西班牙','Austria':'奧地利',
-  'United States':'美國','Bosnia & Herzegovina':'波黑','Belgium':'比利時','Senegal':'塞內加爾',
-  'Brazil':'巴西','Japan':'日本','Ivory Coast':'科特迪瓦','Norway':'挪威',
-  'Mexico':'墨西哥','Ecuador':'厄瓜多爾','England':'英格蘭','DR Congo':'剛果(金)',
-  'Argentina':'阿根廷','Cape Verde':'佛得角','Australia':'澳大利亞','Egypt':'埃及',
-  'Switzerland':'瑞士','Algeria':'阿爾及利亞','Colombia':'哥倫比亞','Ghana':'加納'
-};
-function teamNameCN(en){return TEAM_NAMES_CN[en]||en;}
+// (teamName, venueName, venueNameShort, venueLocation defined in I18N section above)
+
 
 const TEAM_SOURCE_LINKS = [
   { label:'FIFA官方 · 球隊大本營名單',  url:'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/team-base-camps-finalised' },
@@ -463,31 +612,7 @@ const VENUES = [
   { id:'bmofield', name:'BMO Field',                city:'Toronto',        state:'ON', country:'Canada', lat:43.6329, lng:-79.4186,  capacity:45000, tz:'America/Toronto' }
 ];
 
-const VENUE_NAME_CN = {
-  azteca:'阿茲特克球場', bbva:'BBVA球場', akron:'阿克隆球場',
-  metlife:'大都會人壽球場', att:'AT&T球場', mercedes:'梅賽德斯-奔馳球場',
-  sofi:'SoFi球場', nrg:'NRG球場', arrowhead:'箭頭球場',
-  gillette:'吉列球場', levis:'李維斯球場', lumen:'流明球場',
-  lincoln:'林肯金融球場', hardrock:'硬石球場', bcplace:'BC Place', bmofield:'BMO球場'
-};
-function venueNameCN(venue){
-  if(!venue) return '';
-  const cn = VENUE_NAME_CN[venue.id] || '';
-  return cn ? cn + '（' + venue.name + '）' : venue.name;
-}
-const STATE_CN = {
-  'NJ':'新澤西州','TX':'得克薩斯州','GA':'佐治亞州','CA':'加利福尼亞州',
-  'MO':'密蘇里州','MA':'馬薩諸塞州','WA':'華盛頓州','PA':'賓夕法尼亞州',
-  'FL':'佛羅里達州','BC':'不列顛哥倫比亞省','ON':'安大略省'
-};
-function venueLocation(v){
-  if(!v)return'';
-  let loc=v.city;
-  if(v.state) loc+=', '+v.state+(STATE_CN[v.state]?'（'+STATE_CN[v.state]+'）':'');
-  loc+=', '+v.country;
-  return loc;
-}
-function venueNameShort(v){return v?VENUE_NAME_CN[v.id]||v.name:v.name;}
+// (venue names and state names defined in I18N section above)
 
 // ==================== DATA (inline fallback, overridden by JSON on server) ====================
 let KNOCKOUT_MATCHES = [
@@ -605,12 +730,12 @@ function teamDisplayName(m){
   if(m.startsWith('W')){
     const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
     if(mm&&mm.status==='completed'){return mm.hs>mm.as?mm.home:mm.away;}
-    return '待定';
+    return T('pending');
   }
   if(m.startsWith('L')){
     const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
     if(mm&&mm.status==='completed'){return mm.hs>mm.as?mm.away:mm.home;}
-    return '待定';
+    return T('pending');
   }
   return m;
 }
@@ -705,18 +830,18 @@ function getBracketTree() {
 function renderBracketTree() {
   const container = document.getElementById('bracketScroll');
   const tree = getBracketTree();
-  const roundCN = {'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
+function roundName(r) { return I18N[currentLang].rounds[r] || r; }
 
   function matchCard(m) {
     const sc=m.status, hw=sc==='completed'&&m.hs>m.as, aw=sc==='completed'&&m.as>m.hs;
     const venue=getVenue(m.venue);
     const ht=teamDisplayName(m.home), at=teamDisplayName(m.away);
     const hFlag=getTeamFlagTeam(m.home), aFlag=getTeamFlagTeam(m.away);
-    return `<div class="bt-match ${sc}" onclick="onBracketMatchClick('${m.venue}','${m.mid}')" title="${m.date} ${m.time} (北京時間) | ${venue?venueNameCN(venue):''}">
-      ${sc==='completed'?'<span class="bt-status ft">FT</span>':sc==='live'?'<span class="bt-status live-tag">LIVE</span>':''}
-      <span class="bt-round-name">${roundCN[m.round]||m.round}</span>
-      <div class="bt-team">${hFlag?`<img class="bt-flag" src="${flagUrl(hFlag)}">`:''}<span class="bt-name">${esc(teamNameCN(ht))}</span><span class="bt-score ${sc==='completed'?(hw?'win':'loss'):'pending'}">${sc==='completed'?m.hs:'-'}</span></div>
-      <div class="bt-team">${aFlag?`<img class="bt-flag" src="${flagUrl(aFlag)}">`:''}<span class="bt-name">${esc(teamNameCN(at))}</span><span class="bt-score ${sc==='completed'?(aw?'win':'loss'):'pending'}">${sc==='completed'?m.as:'-'}</span></div>
+    return `<div class="bt-match ${sc}" onclick="onBracketMatchClick('${m.venue}','${m.mid}')" title="${m.date} ${m.time} (${T('beijingTime')}) | ${venue?venueName(venue):''}">
+      ${sc==='completed'?'<span class="bt-status ft">'+T('ft')+'</span>':sc==='live'?'<span class="bt-status live-tag">LIVE</span>':''}
+      <span class="bt-round-name">${roundName(m.round)}</span>
+      <div class="bt-team">${hFlag?`<img class="bt-flag" src="${flagUrl(hFlag)}">`:''}<span class="bt-name">${esc(teamName(ht))}</span><span class="bt-score ${sc==='completed'?(hw?'win':'loss'):'pending'}">${sc==='completed'?m.hs:'-'}</span></div>
+      <div class="bt-team">${aFlag?`<img class="bt-flag" src="${flagUrl(aFlag)}">`:''}<span class="bt-name">${esc(teamName(at))}</span><span class="bt-score ${sc==='completed'?(aw?'win':'loss'):'pending'}">${sc==='completed'?m.as:'-'}</span></div>
       <div class="bt-time">${m.date} ${m.time}</div>
       <div class="bt-venue">📍 ${venue?venue.city:''}</div>
     </div>`;
@@ -789,8 +914,7 @@ function renderSchedule(activeMid){
   const c=document.getElementById('schedulePanel');
   const days={};
   KNOCKOUT_MATCHES.forEach(m=>{if(!days[m.date])days[m.date]=[];days[m.date].push(m);});
-  const dn=['週日','週一','週二','週三','週四','週五','週六'];
-  const roundLabels={'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
+  const dn=I18N[currentLang].weekdays;
   let html='';
   Object.keys(days).sort().forEach(date=>{
     const d=new Date(date+'T00:00:00+08:00');
@@ -801,10 +925,10 @@ function renderSchedule(activeMid){
       const hw=sc==='completed'&&m.hs>m.as,aw=sc==='completed'&&m.as>m.hs;
       const activeClass=(activeMid==m.mid)?' active-match':'';
       const hResolved=isTeamResolved(m.home),aResolved=isTeamResolved(m.away);
-      const hName=teamNameCN(teamDisplayName(m.home)),aName=teamNameCN(teamDisplayName(m.away));
+      const hName=teamName(teamDisplayName(m.home)),aName=teamName(teamDisplayName(m.away));
       html+=`<div class="match-card ${sc}${activeClass}" id="sched-${m.mid}" onclick="showMatchOnMap('${m.mid}')">
         <div class="mc-header">
-          <span class="mc-round">${roundLabels[m.round]||m.round}</span>
+          <span class="mc-round">${roundName(m.round)}</span>
         </div>
         <div class="mc-matchup">
           ${hResolved?`<img class="mc-flag" src="${flagUrl(m.home)}" onclick="event.stopPropagation();showTeamDetail('${esc(m.home)}')">`:''}
@@ -819,8 +943,8 @@ function renderSchedule(activeMid){
           </span>
         </div>
         <div class="mc-times">
-          <span class="mc-bj">🇨🇳 北京時間: ${m.date} ${m.time}</span>
-          ${venue?`<span class="mc-local">🕐 當地時間: ${localTime} (${venue.tz.split('/').pop().replace('_',' ')})</span>`:''}
+          <span class="mc-bj">🇨🇳 ${T('beijingTime')}: ${m.date} ${m.time}</span>
+          ${venue?`<span class="mc-local">🕐 ${T('localTime')}: ${localTime} (${venue.tz.split('/').pop().replace('_',' ')})</span>`:''}
         </div>
         <div class="mc-venue">📍 ${venue?venueNameShort(venue)+' · '+venueLocation(venue):''}</div>
       </div>`;
@@ -960,8 +1084,8 @@ async function loadVenuePopupInfo(vid){
       const data=await wttrFetch(v);
       let cw=data._source==='wttr'?parseWttrCurrent(data):parseOpenMeteoCurrent(data);
       if(cw) wel.innerHTML=`🌡️ ${cw.temp}°C ${cw.desc} | 溼度 ${cw.hum}% | 💨 ${cw.wind}`;
-      else wel.innerHTML='天氣暫不可用';
-    }catch(e){wel.innerHTML='天氣加載失敗';}
+      else wel.innerHTML=T('weatherNA');
+    }catch(e){wel.innerHTML=T('weatherFail');}
   }
 
   // Next match at this venue
@@ -978,9 +1102,8 @@ async function loadVenuePopupInfo(vid){
         let fc=data._source==='wttr'?parseWttrForecast(data,localDateStr):parseOpenMeteoForecast(data,localDateStr);
         if(fc) fcText=` | 預報: ${fc.desc} 🌡️${fc.low}°C~${fc.high}°C`;
       }catch(e){}
-      const roundCN={'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
-      const hCN=teamNameCN(teamDisplayName(next.home)),aCN=teamNameCN(teamDisplayName(next.away));
-      nel.innerHTML=`📅 下一場: ${next.date} ${next.time} 北京 | 🕐 ${localDT}<br>⚽ ${roundCN[next.round]||next.round}: ${hCN} vs ${aCN}${fcText}`;
+      const hCN=teamName(teamDisplayName(next.home)),aCN=teamName(teamDisplayName(next.away));
+      nel.innerHTML=`📅 ${T('nextMatch')}: ${next.date} ${next.time} ${T('beijingTime')} | 🕐 ${localDT}<br>⚽ ${roundName(next.round)}: ${hCN} vs ${aCN}${fcText}`;
     }
   }
 }
@@ -1037,7 +1160,7 @@ function showMatchOnMap(mid){
     ).join('');
     marker.bindPopup(
       `<div style="min-width:180px;padding:10px 12px;font-family:-apple-system,sans-serif;font-size:11px;color:#e6edf3;line-height:1.5;">
-        <div style="font-size:13px;font-weight:700;color:#f0c040;margin-bottom:6px;"><img src="${flagUrl(t.team)}" style="width:18px;height:12px;vertical-align:middle;margin-right:5px;">${esc(teamNameCN(t.team))}</div>
+        <div style="font-size:13px;font-weight:700;color:#f0c040;margin-bottom:6px;"><img src="${flagUrl(t.team)}" style="width:18px;height:12px;vertical-align:middle;margin-right:5px;">${esc(teamName(t.team))}</div>
         <div style="margin-bottom:4px;"><span style="color:#8b949e;">📍 Base Camp:</span> ${esc(bc.city)}</div>
         <div style="margin-bottom:4px;"><span style="color:#8b949e;">🏨 Hotel:</span> ${esc(hotelName)}</div>
         <div style="margin-top:8px;padding-top:6px;border-top:1px solid #30363d;font-size:10px;color:#8b949e;">
@@ -1133,7 +1256,7 @@ async function showStadiumWeather(venue,mid,match){
   const loadingIcon=L.divIcon({
     className:'weather-popup',
     html:`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:4px 8px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
-      `<span class="spinner" style="display:inline-block;vertical-align:middle;"></span> 加載天氣...</div>`,
+      `<span class="spinner" style="display:inline-block;vertical-align:middle;"></span> ${T('loadingWeather')}</div>`,
     iconSize:[0,0],iconAnchor:[60,-5]
   });
   const popup=L.marker([popupLat,venue.lng],{icon:loadingIcon,interactive:false}).addTo(map);
@@ -1161,12 +1284,12 @@ async function showStadiumWeather(venue,mid,match){
       if(data._source==='wttr'){fc=parseWttrForecast(data,localDateStr);}
       else{fc=parseOpenMeteoForecast(data,localDateStr);}
       if(fc){
-        forecastText=`<br><span style="color:#f0c040;">比賽日: ${fc.desc}</span> 🌡️ ${fc.low}°C~${fc.high}°C${fc.precip!=null?' 💧'+fc.precip+'%':''}`;
+        forecastText=`<br><span style="color:#f0c040;">${T('matchDayWeather')}: ${fc.desc}</span> 🌡️ ${fc.low}°C~${fc.high}°C${fc.precip!=null?' 💧'+fc.precip+'%':''}`;
       }
     }
     const localDT = bjToLocalDateTime(match.date, match.time, venue.tz);
     const weatherHtml=`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
-      `<strong>${venueNameCN(venue)}</strong> ${cw?`🌡️ ${cw.temp}°C ${cw.desc}`:'天氣暫不可用'}`+
+      `<strong>${venueName(venue)}</strong> ${cw?`🌡️ ${cw.temp}°C ${cw.desc}`:T('weatherNA')}`+
       `<br><span style="color:#8b949e;">🕐 ${localDT}</span>`+
       forecastText+
       `</div>`;
@@ -1174,7 +1297,7 @@ async function showStadiumWeather(venue,mid,match){
   }catch(e){
     popup.setIcon(L.divIcon({
       className:'weather-popup',
-      html:`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;"><strong>${venueNameCN(venue)}</strong><br><span style="color:#8b949e;">天氣暫不可用</span></div>`,
+      html:`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;"><strong>${venueName(venue)}</strong><br><span style="color:#8b949e;">${T('weatherNA')}</span></div>`,
       iconSize:[0,0],iconAnchor:[80,-5]
     }));
   }
@@ -1185,7 +1308,6 @@ async function showTeamDetail(team){
   const record=computeTeamRecord(team,GROUP_RESULTS);
   const flag=flagUrl(team);
   const bc=BASE_CAMPS[team];
-  const roundCN={'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
 
   // Get next match for same-stadium comparison
   const nextMatch=getTeamNextMatch(team);
@@ -1198,11 +1320,11 @@ async function showTeamDetail(team){
     (m.away.startsWith('L')&&teamDisplayName(m.away)===team)
   ));
 
-  let html=`<div class="modal-header"><img class="flag-lg" src="${flag}"><span class="team-name">${teamNameCN(team)}</span>${bc?`<span class="hotel-info">🏨 ${bc.city}</span>`:''}<button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body">`;
+  let html=`<div class="modal-header"><img class="flag-lg" src="${flag}"><span class="team-name">${teamName(team)}</span>${bc?`<span class="hotel-info">🏨 ${bc.city}</span>`:''}<button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body">`;
 
   // Group stage matches — row by row
   const groupMatches = GROUP_RESULTS.filter(r=>r.home===team||r.away===team);
-  html+=`<div class="modal-section"><h3>📊 小組賽戰績 (${record.w}勝${record.d}平${record.l}負 · ${record.gf}進${record.ga}失 · ${record.pts}分)</h3>`;
+  html+=`<div class="modal-section"><h3>📊 ${T('titleBaseCamp')} (${record.w}${T('win')}${record.d}${T('draw')}${record.l}${T('loss')} · ${record.gf}${T('goalsFor')}${record.ga}${T('goalsAgainst')} · ${record.pts}${T('pts')})</h3>`;
   groupMatches.forEach(r=>{
     const our=r.home===team?r.hs:r.as,their=r.home===team?r.as:r.hs;
     const opp=r.home===team?r.away:r.home;
@@ -1211,27 +1333,27 @@ async function showTeamDetail(team){
     const sameStadium=nextStadiumVenue&&r.venue===nextStadiumVenue.id;
     html+=`<div class="played-match-card${sameStadium?' same-stadium':''}">
       <div class="pm-header">
-        <span class="pm-round">小組賽</span>
-        <span class="pm-date"><img class="bt-flag" src="${flagUrl(opp)}" style="width:14px;height:10px;vertical-align:middle;margin-right:3px;">${esc(teamNameCN(opp))}</span>
+        <span class="pm-round">${T('groupStage')}</span>
+        <span class="pm-date"><img class="bt-flag" src="${flagUrl(opp)}" style="width:14px;height:10px;vertical-align:middle;margin-right:3px;">${esc(teamName(opp))}</span>
       </div>
-      <div class="pm-result"><span>${esc(teamNameCN(team))}</span><span class="pm-score ${result}">${our} - ${their}</span></div>
-      <div class="pm-venue" style="${sameStadium?'color:#f0c040;font-weight:600;':''}">🏟️ ${venue?venueNameShort(venue):''} | ${venue?venueLocation(venue):''}${sameStadium?' <span class="same-stadium-badge">⭐ 下一場同場</span>':''}</div>
+      <div class="pm-result"><span>${esc(teamName(team))}</span><span class="pm-score ${result}">${our} - ${their}</span></div>
+      <div class="pm-venue" style="${sameStadium?'color:#f0c040;font-weight:600;':''}">🏟️ ${venue?venueNameShort(venue):''} | ${venue?venueLocation(venue):''}${sameStadium?' <span class="same-stadium-badge">'+T('sameStadiumBadge')+'</span>':''}</div>
     </div>`;
   });
   html+=`</div>`;
 
   // 🚆 Distances: hotel → stadium for upcoming matches
   if(upcoming.length>0&&bc){
-    html+=`<div class="modal-section"><h3>🚆 行軍距離（酒店 → 球場）</h3>`;
+    html+=`<div class="modal-section"><h3>🚆 ${T('titleDist')}</h3>`;
     upcoming.forEach(m=>{
       const venue=getVenue(m.venue);
       if(!venue)return;
       const dist=haversineKm(bc.lat,bc.lng,venue.lat,venue.lng);
-      const oppCN=teamNameCN(teamDisplayName(m.home===team?m.away:m.home));
+      const oppCN=teamName(teamDisplayName(m.home===team?m.away:m.home));
       const opp=m.home===team?m.away:m.home;
       const isResolved=isTeamResolved(opp);
       html+=`<div class="ticket-card">
-        <div class="tc-header">🎫 ${roundCN[m.round]||m.round} · ${m.date} ${m.time} 北京時間${isResolved?` · vs ${teamNameCN(opp)}`:''}</div>
+        <div class="tc-header">🎫 ${roundName(m.round)} · ${m.date} ${m.time} ${T('beijingTime')}${isResolved?` · vs ${teamName(opp)}`:''}</div>
         <div class="tc-route">
           <div class="tc-from"><div class="tc-city">${bc.city.split(',')[0]}</div><div class="tc-sub">🏨 球隊酒店 · ${bc.city}</div></div>
           <div class="tc-arrow">━▶</div>
@@ -1239,8 +1361,8 @@ async function showTeamDetail(team){
         </div>
         <div class="tc-info">
           <span>📏 <span class="tc-value">${dist} km</span></span>
-          <span>✈️ 約 <span class="tc-value">${Math.round(dist/800)}小時</span> 飛行</span>
-          <span>🚗 約 <span class="tc-value">${Math.round(dist/80)}小時</span> 駕車</span>
+          <span>✈️ ${T('about')} <span class="tc-value">${Math.round(dist/800)}${T('hours')}</span> ${T('flightHours')}</span>
+          <span>🚗 ${T('about')} <span class="tc-value">${Math.round(dist/80)}${T('hours')}</span> ${T('driveHours')}</span>
         </div>
       </div>`;
     });
@@ -1249,7 +1371,7 @@ async function showTeamDetail(team){
 
   // ✅ Played KO matches with weather + same-stadium highlight
   if(completedKO.length>0){
-    html+=`<div class="modal-section"><h3>✅ 已完賽淘汰賽</h3>`;
+    html+=`<div class="modal-section"><h3>✅ ${T('titleKo')}</h3>`;
     completedKO.forEach(m=>{
       const venue=getVenue(m.venue);
       const opp=m.home===team?m.away:m.home;
@@ -1259,12 +1381,12 @@ async function showTeamDetail(team){
 
       html+=`<div class="played-match-card${sameStadium?' same-stadium':''}" id="pm-${m.mid}">
         <div class="pm-header">
-          <span class="pm-round">${roundCN[m.round]||m.round}</span>
-          <span class="pm-date">${m.date} ${m.time} 北京時間</span>
+          <span class="pm-round">${roundName(m.round)}</span>
+          <span class="pm-date">${m.date} ${m.time} ${T('beijingTime')}</span>
         </div>
-        <div class="pm-result"><span>vs ${esc(teamNameCN(opp))}</span><span class="pm-score ${result}">${our} - ${their}</span></div>
+        <div class="pm-result"><span>vs ${esc(teamName(opp))}</span><span class="pm-score ${result}">${our} - ${their}</span></div>
         <div class="pm-weather" id="pmw-${m.mid}"><span class="spinner"></span> 加載天氣...</div>
-        <div class="pm-venue" style="${sameStadium?'color:#f0c040;font-weight:600;':''}">🏟️ ${venue?venueNameShort(venue):''} | ${venue?venueLocation(venue):''}${sameStadium?' <span class="same-stadium-badge">⭐ 下一場同場</span>':''}</div>
+        <div class="pm-venue" style="${sameStadium?'color:#f0c040;font-weight:600;':''}">🏟️ ${venue?venueNameShort(venue):''} | ${venue?venueLocation(venue):''}${sameStadium?' <span class="same-stadium-badge">'+T('sameStadiumBadge')+'</span>':''}</div>
       </div>`;
     });
     html+=`</div>`;
@@ -1297,7 +1419,7 @@ async function wttrFetch(venue){
   const cacheKey=`${venue.lat.toFixed(2)},${venue.lng.toFixed(2)}`;
   if(WEATHER_CACHE[cacheKey]&&Date.now()-WEATHER_CACHE[cacheKey]._ts<600000)return WEATHER_CACHE[cacheKey];
   const urls=[
-    `https://wttr.in/${venue.lat.toFixed(2)},${venue.lng.toFixed(2)}?format=j1&lang=zh`,
+    `https://wttr.in/${venue.lat.toFixed(2)},${venue.lng.toFixed(2)}?format=j1${wttrLangParam()}`,
     `https://api.open-meteo.com/v1/forecast?latitude=${venue.lat.toFixed(4)}&longitude=${venue.lng.toFixed(4)}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&current_weather=true&timezone=${encodeURIComponent(venue.tz)}&forecast_days=7`
   ];
   for(const url of urls){
@@ -1306,31 +1428,11 @@ async function wttrFetch(venue){
   throw new Error('All sources failed');
 }
 
-function weatherCN(desc){
-  if(!desc)return'--';
-  const m={
-    'Sunny':'晴','Clear':'晴','Partly cloudy':'少雲','Partly Cloudy':'少雲',
-    'Cloudy':'多雲','Overcast':'陰天','Mist':'霧','Fog':'霧','Foggy':'霧',
-    'Light drizzle':'小毛毛雨','Patchy light drizzle':'小毛毛雨',
-    'Light rain':'小雨','Light Rain':'小雨','Patchy light rain':'小雨','Patchy rain possible':'可能有陣雨',
-    'Moderate rain':'中雨','Moderate rain at times':'間歇中雨',
-    'Heavy rain':'大雨','Heavy rain at times':'間歇大雨',
-    'Light snow':'小雪','Moderate snow':'中雪','Heavy snow':'大雪',
-    'Patchy light snow':'小陣雪','Patchy moderate snow':'中陣雪',
-    'Thunderstorm':'雷暴','Thundery outbreaks possible':'可能有雷暴',
-    'Freezing fog':'凍霧','Ice pellets':'冰粒',
-    'Light rain shower':'小陣雨','Moderate or heavy rain shower':'大陣雨',
-    'Light sleet':'小凍雨','Moderate or heavy sleet':'大凍雨',
-    'Blizzard':'暴風雪','Blowing snow':'吹雪',
-    'Torrential rain shower':'暴雨',
-  };
-  for(const[k,v]of Object.entries(m)){if(desc.toLowerCase().includes(k.toLowerCase()))return v;}
-  return desc;
-}
-function parseWttrCurrent(data){const cc=data.current_condition&&data.current_condition[0];if(!cc||cc.temp_C==null)return null;return{temp:parseInt(cc.temp_C),desc:weatherCN((cc.weatherDesc&&cc.weatherDesc[0])?cc.weatherDesc[0].value:'')};}
-function parseWttrForecast(data,localDateStr){const w=data.weather||[];for(const day of w){if(day.date===localDateStr)return{desc:weatherCN((day.hourly&&day.hourly[4])?((day.hourly[4].weatherDesc&&day.hourly[4].weatherDesc[0])?day.hourly[4].weatherDesc[0].value:''):''),high:parseInt(day.maxtempC),low:parseInt(day.mintempC)};}return null;}
-function parseOpenMeteoCurrent(data){const cw=data.current_weather;if(!cw||cw.temperature==null||isNaN(cw.temperature))return null;const WC={0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'};return{temp:Math.round(cw.temperature),desc:WC[cw.weathercode]||`碼${cw.weathercode}`};}
-function parseOpenMeteoForecast(data,localDateStr){const d=data.daily;if(!d||!d.time)return null;const WC={0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'};for(let i=0;i<d.time.length;i++){if(d.time[i]===localDateStr)return{desc:WC[d.weathercode[i]]||`碼${d.weathercode[i]}`,high:Math.round(d.temperature_2m_max[i]),low:Math.round(d.temperature_2m_min[i]),precip:d.precipitation_probability_max[i]};}return null;}
+// weather description: weatherDesc(codeOrText) in I18N section above
+function parseWttrCurrent(data){const cc=data.current_condition&&data.current_condition[0];if(!cc||cc.temp_C==null)return null;return{temp:parseInt(cc.temp_C),desc:weatherDesc((cc.weatherDesc&&cc.weatherDesc[0])?cc.weatherDesc[0].value:'')};}
+function parseWttrForecast(data,localDateStr){const w=data.weather||[];for(const day of w){if(day.date===localDateStr)return{desc:weatherDesc((day.hourly&&day.hourly[4])?((day.hourly[4].weatherDesc&&day.hourly[4].weatherDesc[0])?day.hourly[4].weatherDesc[0].value:''):''),high:parseInt(day.maxtempC),low:parseInt(day.mintempC)};}return null;}
+function parseOpenMeteoCurrent(data){const cw=data.current_weather;if(!cw||cw.temperature==null||isNaN(cw.temperature))return null;const wm=I18N[currentLang].weather;return{temp:Math.round(cw.temperature),desc:wm[cw.weathercode]||(currentLang==='en'?'Code ':'碼')+cw.weathercode};}
+function parseOpenMeteoForecast(data,localDateStr){const d=data.daily;if(!d||!d.time)return null;const wm=I18N[currentLang].weather;for(let i=0;i<d.time.length;i++){if(d.time[i]===localDateStr)return{desc:wm[d.weathercode[i]]||(currentLang==='en'?'Code ':'碼')+d.weathercode[i],high:Math.round(d.temperature_2m_max[i]),low:Math.round(d.temperature_2m_min[i]),precip:d.precipitation_probability_max[i]};}return null;}
 
 async function fetchHistoricalWeather(venue,dateStr,mid){
   const el=document.getElementById(`pmw-${mid}`);
@@ -1361,19 +1463,19 @@ async function fetchHistoricalWeather(venue,dateStr,mid){
     const resp=await fetch(url,{signal:AbortSignal.timeout(10000)});
     if(resp.ok){
       const data=await resp.json();
-      const d=data.daily;const WC={0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'};
+      const d=data.daily;const wm=I18N[currentLang].weather;
       if(d&&d.time&&d.time[0]===dateStr){
-        const fc={desc:WC[d.weathercode[0]]||`碼${d.weathercode[0]}`,high:Math.round(d.temperature_2m_max[0]),low:Math.round(d.temperature_2m_min[0]),_ts:Date.now()};
+        const fc={desc:wm[d.weathercode[0]]||(currentLang==='en'?'Code ':'碼')+d.weathercode[0],high:Math.round(d.temperature_2m_max[0]),low:Math.round(d.temperature_2m_min[0]),_ts:Date.now()};
         HIST_WEATHER_CACHE[cacheKey]=fc;displayHistoricalWeather(el,fc);return;
       }
     }
   }catch(e){}
 
-  el.innerHTML='🌤️ 暫無歷史天氣數據';
+    el.innerHTML=T('noHistWeather');
 }
 
 function displayHistoricalWeather(el,fc){
-  el.innerHTML=`🌤️ 比賽日天氣: ${fc.desc} <span style="font-weight:600;">${fc.low}°C ~ ${fc.high}°C</span>`;
+  el.innerHTML=`🌤️ ${T('matchDayWeather')}: ${fc.desc} <span style="font-weight:600;">${fc.low}°C ~ ${fc.high}°C</span>`;
 }
 
 // ==================== AUTO UPDATE ====================
@@ -1381,7 +1483,7 @@ function scheduleAutoUpdate(){
   const fmt = d => d.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
 
   function showTime(){
-    document.getElementById('updateTime').textContent = `數據: ${fmt(new Date())}`;
+    document.getElementById('updateTime').textContent = `${T('updateLabel')}: ${fmt(new Date())}`;
   }
 
   // Calculate next data update time based on match schedule
@@ -1442,9 +1544,9 @@ function scheduleAutoUpdate(){
   function updateNextDisplay(){
     const next = getNextScheduledUpdate();
     if (next) {
-      document.getElementById('nextUpdate').textContent = `下次更新: ${fmt(next.time)}`;
+      document.getElementById('nextUpdate').textContent = `${T('nextUpdateLabel')}: ${fmt(next.time)}`;
     } else {
-      document.getElementById('nextUpdate').textContent = '全部比賽已結束';
+      document.getElementById('nextUpdate').textContent = T('allDone');
     }
   }
 
@@ -1466,7 +1568,7 @@ function applyAutoDetectLive(){
 function updateStatusIndicators(){
   const hasLive=KNOCKOUT_MATCHES.some(m=>m.status==='live');
   document.getElementById('liveBadge').style.display=hasLive?'inline':'none';
-  document.getElementById('updateTime').textContent=`數據: ${new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+  document.getElementById('updateTime').textContent=`${T('updateLabel')}: ${new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
 }
 
 // ==================== INIT ====================
@@ -1529,7 +1631,10 @@ async function initApp(){
   // 2. Auto-detect live matches
   applyAutoDetectLive();
 
-  // 3. Initial render
+  // 3. Apply initial language
+  refreshI18n();
+
+  // 4. Initial render
   renderBracketTree();
   updateStatusIndicators();
   updateMapMarkers();
@@ -1554,9 +1659,9 @@ document.addEventListener('DOMContentLoaded', initApp);
 </script>
 <!-- DISCLAIMER -->
 <div class="disclaimer-bar">
-  <div class="disclaimer-track">
-    <span>免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。</span>
-    <span>免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。</span>
+  <div class="disclaimer-track" id="disclaimerLine">
+    <span data-i18n="disclaimer">免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。</span>
+    <span data-i18n="disclaimer">免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。</span>
   </div>
 </div>
 </body>

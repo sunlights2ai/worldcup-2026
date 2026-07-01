@@ -397,7 +397,7 @@ supportBtn:'💝 前往支持頁面',supportUrl:'https://ifdian.net/a/janvis',su
 disclaimer:'免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。',
 updateLabel:'數據',nextUpdateLabel:'下次更新',allDone:'全部比賽已結束',nextMatch:'下一場',
 beijingTime:'北京時間',localTime:'當地時間',msgLoaded:'✅ 已從服務器加載最新數據',msgOffline:'⚠️ 無法連接服務器，使用內聯數據',
-titleBaseCamp:'小組賽統計',titleDist:'行軍距離（酒店 → 球場）',titleKo':'已完賽淘汰賽',titleSrc:'數據溯源',
+titleBaseCamp:'小組賽統計',titleDist:'行軍距離（酒店 → 球場）',titleKo:'已完賽淘汰賽',titleSrc:'數據溯源',
 roundR32:'32強',roundR16:'16強',roundQF:'¼決賽',roundSF:'半決賽',roundTP:'三四名',roundFinal:'決賽',
 groupStage:'小組賽',pending:'待定',ft:'FT',vs:'vs',loadingWeather:'加載天氣...',weatherNA:'天氣暫不可用',
 weatherFail:'天氣加載失敗',noHistWeather:'暫無歷史天氣數據',matchDayWeather:'比賽日天氣',
@@ -527,8 +527,6 @@ function refreshI18n() {
   });
   const surl = document.getElementById('supportUrlText');
   if (surl) surl.textContent = T('supportUrl');
-  const dln = document.getElementById('disclaimerLine');
-  if (dln) dln.textContent = T('disclaimer');
   // Reload weather on map (language changed, weather labels may change)
   if (map) { updateMapMarkers(); }
   updateStatusIndicators();
@@ -827,10 +825,11 @@ function getBracketTree() {
   return {r32Left,r32Right,r16Left,r16Right,qfLeft,qfRight,sfLeft,sfRight,finalMatch,thirdPlace};
 }
 
+function roundName(r) { return I18N[currentLang].rounds[r] || r; }
+
 function renderBracketTree() {
   const container = document.getElementById('bracketScroll');
   const tree = getBracketTree();
-function roundName(r) { return I18N[currentLang].rounds[r] || r; }
 
   function matchCard(m) {
     const sc=m.status, hw=sc==='completed'&&m.hs>m.as, aw=sc==='completed'&&m.as>m.hs;

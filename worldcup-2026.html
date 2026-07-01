@@ -1,0 +1,1563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>2026 世界盃淘汰賽 · 可視化追蹤</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<style>
+:root {
+  --bg: #0d1117; --bg-panel: #161b22; --bg-card: #1c2333; --bg-hover: #21283a;
+  --border: #30363d; --text: #e6edf3; --text-secondary: #8b949e;
+  --accent: #f0c040; --accent2: #58a6ff;
+  --win: #3fb950; --loss: #f85149; --draw: #d29922; --live: #f0883e;
+  --upcoming: #8b949e; --familiar: #d2a8ff; --hotel: #ff7b72;
+  --scrollbar-bg: #161b22; --scrollbar-thumb: #30363d;
+}
+* { margin:0; padding:0; box-sizing:border-box; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans SC', sans-serif;
+  background: var(--bg); color: var(--text); overflow: hidden; height: 100vh;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--scrollbar-bg); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 3px; }
+
+/* ===== HEADER ===== */
+.header {
+  height: 44px; background: var(--bg-panel); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 12px; z-index: 1000; position: relative;
+  min-height: 44px;
+}
+.header .title { font-size: 15px; font-weight: 700; color: var(--accent); }
+.header .meta { margin-left: auto; font-size: 10px; color: var(--text-secondary); display: flex; align-items: center; gap: 12px; }
+.badge { background: var(--bg-card); border: 1px solid var(--border); border-radius: 3px; padding: 1px 6px; font-size: 9px; }
+.badge.live { border-color: var(--live); color: var(--live); display: none; }
+
+/* ===== TABS ===== */
+.tabs { display: flex; gap: 2px; margin-left: 24px; }
+.tab { padding: 4px 16px; border-radius: 4px 4px 0 0; font-size: 12px; cursor: pointer;
+  color: var(--text-secondary); border: 1px solid transparent; transition: all 0.2s; }
+.tab:hover { color: var(--text); border-color: var(--border); }
+.tab.active { color: var(--accent); border-color: var(--border); border-bottom-color: var(--bg); background: var(--bg); position: relative; z-index: 1; }
+
+/* ===== BRACKET FULLSCREEN ===== */
+/* ===== BRACKET FULLSCREEN ===== */
+.bracket-fullscreen {
+  display: flex; flex-direction: column; position: relative;
+  padding: 8px 24px 12px 24px; min-height: 0;
+  height: calc(100vh - 44px - 24px);
+}
+
+/* ===== DISCLAIMER BAR ===== */
+.disclaimer-bar {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 24px;
+  background: var(--bg-panel); border-top: 1px solid var(--border);
+  display: flex; align-items: center; overflow: hidden;
+  z-index: 9999; white-space: nowrap;
+}
+.disclaimer-track {
+  display: inline-flex; gap: 60px;
+  animation: disclaimerScroll 20s linear infinite;
+}
+.disclaimer-track span {
+  font-size: 10px; color: var(--text-secondary);
+  letter-spacing: 0.3px; white-space: nowrap; flex-shrink: 0;
+}
+@keyframes disclaimerScroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.bracket-scroll {
+  flex: 1; width: 100%; overflow: hidden; min-height: 0; cursor: grab; position: relative;
+}
+.bracket-scroll.grabbing { cursor: grabbing; }
+.bracket-tree {
+  display: flex; align-items: center; gap: 0; position: relative;
+  height: fit-content; padding: 20px 12px; min-width: max-content;
+  transform-origin: 0 0; will-change: transform;
+}
+.bt-round {
+  display: flex; flex-direction: column; justify-content: space-around;
+  width: 90px; flex-shrink: 0;
+}
+.bt-gap { width: 16px; flex-shrink: 0; }
+.bt-round-label {
+  width: 16px; flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  writing-mode: vertical-rl; font-size: 9px; color: var(--text-secondary); letter-spacing: 1px;
+}
+.bt-match {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 5px 6px; cursor: pointer; transition: all 0.15s; position: relative;
+  font-size: 9px; min-height: 72px; display: flex; flex-direction: column; justify-content: center;
+}
+.bt-match:hover { border-color: var(--accent2); background: var(--bg-hover); }
+.bt-match.completed { border-color: #3fb95044; }
+.bt-match.live { border-color: var(--live); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{ box-shadow: 0 0 4px var(--live); } 50%{ box-shadow: 0 0 12px var(--live); } }
+.bt-round-name { font-size: 7px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 1px; letter-spacing: 0.5px; }
+.bt-team {
+  display: flex; align-items: center; gap: 3px; padding: 1px 0;
+  white-space: nowrap; overflow: hidden;
+}
+.bt-team .bt-flag { width: 14px; height: 10px; border-radius: 1px; flex-shrink: 0; object-fit: cover; pointer-events: none; }
+.bt-name { flex: 1; overflow: hidden; text-overflow: ellipsis; font-size: 9px; }
+.bt-score { font-weight: 700; font-size: 9px; min-width: 12px; text-align: center; }
+.bt-score.win { color: var(--win); }
+.bt-score.loss { color: var(--loss); }
+.bt-score.pending { color: var(--text-secondary); }
+.bt-status { position: absolute; top: 2px; right: 4px; font-size: 7px; font-weight: 700; }
+.bt-status.ft { color: var(--win); }
+.bt-status.live-tag { color: var(--live); }
+.bt-venue { font-size: 7px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bt-time { font-size: 7px; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; }
+.bt-time-note { text-align: center; font-size: 10px; color: var(--text-secondary); padding: 6px 0 0 0; opacity: 0.7; }
+
+/* ===== SCHEDULE + MAP SPLIT ===== */
+.split-container {
+  display: flex; overflow: hidden;
+  height: calc(100vh - 44px - 24px);
+}
+.schedule-panel {
+  width: 360px; min-width: 320px; overflow-y: auto; overflow-x: hidden;
+  background: var(--bg-panel); border-right: 1px solid var(--border);
+}
+.schedule-panel .day-header {
+  padding: 8px 12px; font-size: 12px; font-weight: 600; color: var(--accent);
+  background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 2;
+}
+.schedule-panel .match-card {
+  padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer; transition: all 0.15s;
+  font-size: 11px;
+}
+.schedule-panel .match-card:hover { background: var(--bg-hover); }
+.schedule-panel .match-card.completed { border-left: 3px solid var(--win); }
+.schedule-panel .match-card.live { border-left: 3px solid var(--live); }
+.schedule-panel .match-card.active-match { border-left: 3px solid var(--accent2); background: rgba(88,166,255,0.08); }
+.schedule-panel .match-card .mc-header { display: flex; align-items: center; gap: 4px; font-size: 10px; color: var(--text-secondary); margin-bottom: 4px; flex-wrap: wrap; }
+.schedule-panel .match-card .mc-header .mc-round { color: var(--accent); font-weight: 600; }
+.schedule-panel .match-card .mc-header .mc-sep { color: var(--border); margin: 0 2px; }
+.schedule-panel .match-card .mc-matchup { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; }
+.schedule-panel .match-card .mc-flag { width: 16px; height: 11px; border-radius: 1px; cursor: pointer; flex-shrink: 0; }
+.schedule-panel .match-card .mc-flag:hover { opacity: 0.7; }
+.schedule-panel .match-card .mc-name { cursor: pointer; }
+.schedule-panel .match-card .mc-name:hover { color: var(--accent2); text-decoration: underline; }
+.schedule-panel .match-card .mc-vs { margin: 0 2px; color: var(--text-secondary); font-size: 9px; flex-shrink: 0; }
+.schedule-panel .match-card .mc-score { font-weight: 700; font-size: 12px; flex-shrink: 0; }
+.schedule-panel .match-card .mc-score.win { color: var(--win); }
+.schedule-panel .match-card .mc-score.loss { color: var(--loss); }
+.schedule-panel .match-card .mc-score.pending { color: var(--text-secondary); }
+.schedule-panel .match-card .mc-score-wrap { display: flex; gap: 3px; align-items: center; flex-shrink: 0; white-space: nowrap; }
+.schedule-panel .match-card .mc-times { display: flex; flex-direction: column; gap: 1px; font-size: 9px; color: var(--text-secondary); margin-bottom: 3px; }
+.schedule-panel .match-card .mc-times .mc-bj { color: var(--accent2); }
+.schedule-panel .match-card .mc-times .mc-local { opacity: 0.8; }
+.schedule-panel .match-card .mc-venue { font-size: 9px; color: var(--text-secondary); }
+
+.map-panel { flex: 1; position: relative; }
+#map { width: 100%; height: 100%; background: #0d1117; }
+.leaflet-container { background: #0d1117 !important; }
+/* Dark tiles via OSM invert filter — muted terrain, clear borders */
+img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) contrast(1.0) saturate(0.15); }
+
+/* Map legend */
+.map-legend {
+  position: absolute; bottom: 10px; left: 10px; z-index: 1000;
+  background: rgba(13,17,23,0.85); border: 1px solid var(--border); border-radius: 4px;
+  padding: 6px 10px; font-size: 10px; display: flex; gap: 10px; flex-wrap: wrap;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+/* ===== SUPPORT VIEW ===== */
+.support-container {
+  display: flex; align-items: center; justify-content: center;
+  height: calc(100vh - 44px - 24px);
+  background: var(--bg);
+}
+.support-card {
+  text-align: center; max-width: 480px; padding: 48px 36px;
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 12px;
+}
+.support-icon { font-size: 48px; margin-bottom: 16px; }
+.support-card h2 { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+.support-desc {
+  font-size: 13px; color: var(--text-secondary); line-height: 1.8; margin-bottom: 10px;
+}
+.support-btn {
+  display: inline-block; margin: 20px 0;
+  padding: 12px 36px;
+  background: linear-gradient(135deg, #f85149, #f0883e);
+  color: #fff; font-size: 15px; font-weight: 600; text-decoration: none;
+  border-radius: 8px; transition: transform 0.2s, box-shadow 0.2s;
+}
+.support-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(248,81,73,0.35); }
+.support-url {
+  font-size: 11px; color: var(--accent); opacity: 0.7; margin-top: 8px;
+  word-break: break-all; text-align: center;
+}
+.support-thanks {
+  font-size: 11px; color: var(--text-secondary); opacity: 0.7; margin-top: 8px;
+}
+
+/* ===== GRADIENT ARROW SVG ===== */
+.gradient-arrow-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 500; }
+.gradient-arrow-svg path { fill: none; }
+
+/* Stadium weather tooltip */
+.stadium-weather-popup {
+  background: rgba(22,27,34,0.95) !important;
+  border: 1px solid #f0c040 !important; border-radius: 6px !important;
+  padding: 4px 8px !important;
+  font-family: -apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif !important;
+  font-size: 11px !important; color: #e6edf3 !important;
+}
+/* Soft dark popup for hotel markers — matches original stable style */
+.hotel-popup .leaflet-popup-content-wrapper {
+  background: rgba(30,35,45,0.82) !important;
+  color: #e6edf3 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.35) !important;
+  padding: 0 !important;
+  font-family: -apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif !important;
+  border: 1px solid rgba(48,54,61,0.6) !important;
+}
+.hotel-popup .leaflet-popup-tip {
+  background: rgba(30,35,45,0.82) !important;
+  border: 1px solid rgba(48,54,61,0.6) !important;
+}
+
+/* ===== MODAL ===== */
+.modal-overlay {
+  position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+  background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+.modal {
+  background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px;
+  width: 520px; max-width: 95vw; max-height: 80vh; overflow-y: auto;
+}
+.modal-header { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--border); gap: 8px; }
+.modal-header .flag-lg { width: 32px; height: 22px; border-radius: 2px; flex-shrink: 0; }
+.modal-header .team-name { font-size: 16px; font-weight: 700; flex: 1; }
+.modal-header .hotel-info { font-size: 10px; color: var(--text-secondary); }
+.modal-close { background: none; border: none; color: var(--text-secondary); cursor: pointer; font-size: 18px; padding: 4px; }
+.modal-close:hover { color: var(--text); }
+.modal-body { padding: 12px 16px; }
+.modal-section { margin-bottom: 14px; }
+.modal-section h3 { font-size: 12px; color: var(--accent2); margin-bottom: 8px; }
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; }
+.stat-item { text-align: center; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; padding: 6px; }
+.stat-val { font-size: 18px; font-weight: 700; }
+.stat-label { font-size: 9px; color: var(--text-secondary); margin-top: 2px; }
+
+/* ===== PLAYED MATCH CARD (in modal) ===== */
+.played-match-card {
+  background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 10px; margin-bottom: 6px; transition: border 0.2s;
+}
+.played-match-card.same-stadium {
+  border: 2px solid var(--accent); background: rgba(240,192,64,0.06);
+}
+.played-match-card .pm-header { display: flex; justify-content: space-between; align-items: center; font-size: 10px; margin-bottom: 4px; }
+.played-match-card .pm-round { color: var(--accent); font-weight: 600; }
+.played-match-card .pm-date { color: var(--text-secondary); }
+.same-stadium-badge {
+  display: inline-block; font-size: 8px; font-weight: 700; color: var(--accent);
+  background: rgba(240,192,64,0.15); padding: 1px 6px; border-radius: 3px;
+  margin-left: 4px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+.played-match-card .pm-result { display: flex; justify-content: space-between; align-items: center; padding: 2px 0; font-size: 12px; }
+.played-match-card .pm-score { font-size: 14px; font-weight: 700; }
+.played-match-card .pm-score.win { color: var(--win); }
+.played-match-card .pm-score.loss { color: var(--loss); }
+.played-match-card .pm-score.draw { color: var(--draw); }
+.played-match-card .pm-venue { font-size: 10px; color: var(--text-secondary); }
+.played-match-card .pm-weather { font-size: 10px; color: var(--accent2); margin-top: 2px; }
+
+/* ===== TICKET CARD (hotel → stadium) ===== */
+.ticket-card {
+  background: linear-gradient(135deg, #1a1f2e 0%, #1c2333 100%);
+  border: 1px dashed var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px;
+  font-size: 10px;
+}
+.ticket-card .tc-header { display: flex; align-items: center; gap: 6px; font-weight: 600; color: var(--accent); margin-bottom: 6px; font-size: 11px; }
+.ticket-card .tc-route { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.ticket-card .tc-from, .ticket-card .tc-to { flex: 1; }
+.ticket-card .tc-city { font-size: 13px; font-weight: 700; color: var(--text); }
+.ticket-card .tc-sub { font-size: 9px; color: var(--text-secondary); }
+.ticket-card .tc-arrow { font-size: 16px; color: var(--accent2); flex-shrink: 0; }
+.ticket-card .tc-info { display: flex; gap: 12px; margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border); font-size: 9px; color: var(--text-secondary); }
+.ticket-card .tc-info span { display: flex; align-items: center; gap: 3px; }
+.ticket-card .tc-value { color: var(--text); font-weight: 600; }
+
+/* ===== FORECAST INLINE ===== */
+.forecast-inline {
+  margin-top: 6px; padding-top: 6px; border-top: 1px dashed var(--border);
+  font-size: 10px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.forecast-inline .fi-label { color: var(--accent); font-weight: 600; }
+.forecast-inline .fi-desc { color: var(--accent2); }
+.forecast-inline .fi-temp { font-weight: 600; color: var(--text); }
+.forecast-inline .fi-precip { color: var(--text-secondary); }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--border); border-top-color: var(--accent2); border-radius: 50%; animation: spin 0.6s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Venue popup — soft dark */
+.venue-popup .leaflet-popup-content-wrapper {
+  background: rgba(30,35,45,0.96) !important;
+  color: #e6edf3 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5) !important;
+  padding: 0 !important;
+}
+.venue-popup .leaflet-popup-tip {
+  background: rgba(30,35,45,0.96) !important;
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <span class="title">🏆 2026 世界盃淘汰賽</span>
+  <div class="tabs">
+    <div class="tab active" data-tab="bracket" onclick="switchTab('bracket')">🏟️ 對陣圖</div>
+    <div class="tab" data-tab="schedule" onclick="switchTab('schedule')">📅 賽程列表</div>
+    <div class="tab" data-tab="support" onclick="switchTab('support')">❤️ 支持創作者</div>
+  </div>
+  <div class="meta">
+    <span class="badge live" id="liveBadge">🔴 LIVE</span>
+    <span id="updateTime"></span>
+    <span id="nextUpdate"></span>
+  </div>
+</div>
+
+<!-- BRACKET VIEW (full screen) -->
+<div class="bracket-fullscreen" id="bracketView">
+  <div class="bt-time-note">⏰ 以下比賽時間均爲北京時間 (UTC+8)</div>
+  <div class="bracket-scroll" id="bracketScroll"></div>
+</div>
+
+<!-- SCHEDULE VIEW (split: list + map) -->
+<div class="split-container" id="scheduleView" style="display:none;">
+  <div class="schedule-panel" id="schedulePanel"></div>
+  <div class="map-panel">
+    <div id="map"></div>
+    <div class="map-legend">
+      <span class="legend-item"><span class="legend-dot" style="background:#3fb950"></span>已完賽</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#f0883e"></span>進行中</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#8b949e"></span>即將</span>
+      <span class="legend-item"><span class="legend-dot" style="background:#58a6ff"></span>決賽</span>
+    </div>
+  </div>
+</div>
+
+<!-- SUPPORT VIEW -->
+<div class="support-container" id="supportView" style="display:none;">
+  <div class="support-card">
+    <div class="support-icon">❤️</div>
+    <h2>支持創作者</h2>
+    <p class="support-desc">
+      本站由獨立開發者用愛發電維護，致力於爲球迷提供沉浸式的世界盃可視化追蹤體驗。
+    </p>
+    <p class="support-desc">
+      如果你覺得這個工具對你有幫助，歡迎請創作者喝杯咖啡 ☕
+      每一份支持都是持續更新與優化的動力。
+    </p>
+    <a class="support-btn" href="https://ifdian.net/a/janvis" target="_blank" rel="noopener">
+      💝 前往支持頁面
+    </a>
+    <p class="support-url">https://ifdian.net/a/janvis</p>
+    <p class="support-thanks">感謝每一位支持的朋友，你的鼓勵是我最大的動力 🙏</p>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay" style="display:none">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+// ==================== DATA ====================
+const COUNTRY_FLAGS = {
+  'Germany':'de','Paraguay':'py','France':'fr','Sweden':'se',
+  'South Africa':'za','Canada':'ca','Netherlands':'nl','Morocco':'ma',
+  'Portugal':'pt','Croatia':'hr','Spain':'es','Austria':'at',
+  'United States':'us','Bosnia & Herzegovina':'ba','Belgium':'be','Senegal':'sn',
+  'Brazil':'br','Japan':'jp','Ivory Coast':'ci','Norway':'no',
+  'Mexico':'mx','Ecuador':'ec','England':'gb-eng','DR Congo':'cd',
+  'Argentina':'ar','Cape Verde':'cv','Australia':'au','Egypt':'eg',
+  'Switzerland':'ch','Algeria':'dz','Colombia':'co','Ghana':'gh'
+};
+const TEAM_NAMES_CN = {
+  'Germany':'德國','Paraguay':'巴拉圭','France':'法國','Sweden':'瑞典',
+  'South Africa':'南非','Canada':'加拿大','Netherlands':'荷蘭','Morocco':'摩洛哥',
+  'Portugal':'葡萄牙','Croatia':'克羅地亞','Spain':'西班牙','Austria':'奧地利',
+  'United States':'美國','Bosnia & Herzegovina':'波黑','Belgium':'比利時','Senegal':'塞內加爾',
+  'Brazil':'巴西','Japan':'日本','Ivory Coast':'科特迪瓦','Norway':'挪威',
+  'Mexico':'墨西哥','Ecuador':'厄瓜多爾','England':'英格蘭','DR Congo':'剛果(金)',
+  'Argentina':'阿根廷','Cape Verde':'佛得角','Australia':'澳大利亞','Egypt':'埃及',
+  'Switzerland':'瑞士','Algeria':'阿爾及利亞','Colombia':'哥倫比亞','Ghana':'加納'
+};
+function teamNameCN(en){return TEAM_NAMES_CN[en]||en;}
+
+const TEAM_SOURCE_LINKS = [
+  { label:'FIFA官方 · 球隊大本營名單',  url:'https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/team-base-camps-finalised' },
+  { label:'FIFA · 交互式基地地圖',       url:'https://fwc26teambasecamps.fifa.com/#/tbc/map' },
+  { label:'FYT體育 · 中文解讀',        url:'https://fytpress.com/worldcup-2026/overview/worldcup-2026-team-base-camps-guide/' }
+];
+
+const BASE_CAMPS = {
+  'Germany':       { city:'Winston-Salem, NC',     lat:36.10, lng:-80.26, hotel:'Graylyn Estate',                        links:'hostcityinsider' },
+  'Paraguay':      { city:'San Jose, CA',           lat:37.34, lng:-121.89, hotel:'Signia by Hilton San Jose',           links:'hostcityinsider' },
+  'France':        { city:'Wellesley, MA',          lat:42.38, lng:-71.24, hotel:'Four Seasons Hotel Boston',             links:'hostcityinsider' },
+  'Sweden':        { city:'Frisco, TX',             lat:33.15, lng:-96.82, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'South Africa':  { city:'Pachuca, MX',            lat:20.12, lng:-98.73, hotel:'Camino Real Pachuca',                  links:'hostcityinsider' },
+  'Canada':        { city:'Vancouver, BC',          lat:49.28, lng:-123.12, hotel:'The Westin Bayshore Vancouver',      links:'hostcityinsider' },
+  'Netherlands':   { city:'Kansas City, MO',        lat:39.10, lng:-94.58, hotel:'Hotel Kansas City (Unbound)',          links:'hostcityinsider' },
+  'Morocco':       { city:'Basking Ridge, NJ',      lat:40.71, lng:-74.55, hotel:'The Ridge, Basking Ridge',            links:'hostcityinsider' },
+  'Portugal':      { city:'Palm Beach Gardens, FL', lat:26.82, lng:-80.14, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Croatia':       { city:'Alexandria, VA',         lat:38.80, lng:-77.05, hotel:'Hotel AKA Alexandria',                 links:'hostcityinsider' },
+  'Spain':         { city:'Chattanooga, TN',        lat:35.05, lng:-85.27, hotel:'The Read House Hotel',                  links:'hostcityinsider' },
+  'Austria':       { city:'Goleta, CA',             lat:34.42, lng:-119.70, hotel:'Ritz-Carlton Bacara, Goleta',        links:'hostcityinsider' },
+  'United States': { city:'Irvine, CA',             lat:33.68, lng:-117.83, hotel:'Marriott Irvine Spectrum',             links:'hostcityinsider' },
+  'Bosnia & Herzegovina':{ city:'Salt Lake City, UT',lat:40.57, lng:-111.89, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Belgium':       { city:'Renton, WA',             lat:47.48, lng:-122.22, hotel:'Hyatt Regency Lake Washington',       links:'hostcityinsider' },
+  'Senegal':       { city:'Piscataway, NJ',         lat:40.55, lng:-74.46, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Brazil':        { city:'Basking Ridge, NJ',       lat:40.71, lng:-74.55, hotel:'The Ridge, Basking Ridge',            links:'hostcityinsider' },
+  'Japan':         { city:'Nashville, TN',          lat:36.16, lng:-86.78, hotel:'TBA',                                  links:'hostcityinsider' },
+  'Ivory Coast':   { city:'Chester, PA',            lat:39.85, lng:-75.36, hotel:'TBA',                                  links:'hostcityinsider' },
+  'Norway':        { city:'Greensboro, NC',         lat:36.07, lng:-79.79, hotel:'Grandover Resort & Spa',             links:'hostcityinsider' },
+  'Mexico':        { city:'Mexico City, MX',        lat:19.43, lng:-99.13, hotel:'On-site CAR accommodation',             links:'hostcityinsider' },
+  'Ecuador':       { city:'Columbus, OH',           lat:39.96, lng:-83.00, hotel:'Le Méridien Columbus, The Joseph',  links:'hostcityinsider' },
+  'England':       { city:'Prairie Village, KS',    lat:39.10, lng:-94.58, hotel:'The Inn at Meadowbrook',              links:'hostcityinsider' },
+  'DR Congo':      { city:'Houston, TX',            lat:29.76, lng:-95.37, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Argentina':     { city:'Kansas City, KS',        lat:39.11, lng:-94.63, hotel:'Hotel Savoy, Kansas City',              links:'hostcityinsider' },
+  'Cape Verde':    { city:'Tampa, FL',              lat:27.95, lng:-82.46, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Australia':     { city:'Oakland, CA',            lat:37.80, lng:-122.27, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Egypt':         { city:'Spokane, WA',            lat:47.66, lng:-117.42, hotel:'Official Team Hotel',                    links:'hostcityinsider' },
+  'Switzerland':   { city:'San Diego, CA',          lat:32.72, lng:-117.16, hotel:'Fairmont Grand Del Mar',              links:'hostcityinsider' },
+  'Algeria':       { city:'Lawrence, KS',           lat:38.97, lng:-95.24, hotel:'The Oread, Lawrence',                  links:'hostcityinsider' },
+  'Colombia':      { city:'Guadalajara, MX',        lat:20.72, lng:-103.39, hotel:'Grand Fiesta Americana Country Club', links:'hostcityinsider' },
+  'Ghana':         { city:'Smithfield, RI',         lat:41.92, lng:-71.53, hotel:'Official Team Hotel',                    links:'hostcityinsider' }
+};
+
+const VENUES = [
+  { id:'azteca',   name:'Estadio Azteca',           city:'Mexico City',    state:'',    country:'Mexico', lat:19.3030, lng:-99.1505,  capacity:87523, tz:'America/Mexico_City' },
+  { id:'bbva',     name:'Estadio BBVA',             city:'Monterrey',      state:'',    country:'Mexico', lat:25.6692, lng:-100.2443, capacity:53789, tz:'America/Monterrey' },
+  { id:'akron',    name:'Estadio Akron',            city:'Guadalajara',    state:'',    country:'Mexico', lat:20.6818, lng:-103.4627, capacity:49850, tz:'America/Mexico_City' },
+  { id:'metlife',  name:'MetLife Stadium',          city:'East Rutherford',state:'NJ', country:'USA',    lat:40.8136, lng:-74.0745,  capacity:82500, tz:'America/New_York' },
+  { id:'att',      name:'AT&T Stadium',             city:'Arlington',      state:'TX', country:'USA',    lat:32.7473, lng:-97.0945,  capacity:80000, tz:'America/Chicago' },
+  { id:'mercedes', name:'Mercedes-Benz Stadium',    city:'Atlanta',        state:'GA', country:'USA',    lat:33.7554, lng:-84.4011,  capacity:71000, tz:'America/New_York' },
+  { id:'sofi',     name:'SoFi Stadium',             city:'Inglewood',      state:'CA', country:'USA',    lat:33.9534, lng:-118.3390, capacity:70240, tz:'America/Los_Angeles' },
+  { id:'nrg',      name:'NRG Stadium',              city:'Houston',        state:'TX', country:'USA',    lat:29.6847, lng:-95.4108,  capacity:72220, tz:'America/Chicago' },
+  { id:'arrowhead',name:'GEHA Field at Arrowhead',  city:'Kansas City',    state:'MO', country:'USA',    lat:39.0489, lng:-94.4840,  capacity:76416, tz:'America/Chicago' },
+  { id:'gillette', name:'Gillette Stadium',         city:'Foxborough',     state:'MA', country:'USA',    lat:42.0909, lng:-71.2643,  capacity:65878, tz:'America/New_York' },
+  { id:'levis',    name:"Levi's Stadium",           city:'Santa Clara',    state:'CA', country:'USA',    lat:37.4036, lng:-121.9701, capacity:68500, tz:'America/Los_Angeles' },
+  { id:'lumen',    name:'Lumen Field',              city:'Seattle',        state:'WA', country:'USA',    lat:47.5952, lng:-122.3316, capacity:69000, tz:'America/Los_Angeles' },
+  { id:'lincoln',  name:'Lincoln Financial Field',  city:'Philadelphia',   state:'PA', country:'USA',    lat:39.9008, lng:-75.1674,  capacity:67594, tz:'America/New_York' },
+  { id:'hardrock', name:'Hard Rock Stadium',        city:'Miami Gardens',  state:'FL', country:'USA',    lat:25.9580, lng:-80.2389,  capacity:64767, tz:'America/New_York' },
+  { id:'bcplace',  name:'BC Place',                 city:'Vancouver',      state:'BC', country:'Canada', lat:49.2767, lng:-123.1120, capacity:54320, tz:'America/Vancouver' },
+  { id:'bmofield', name:'BMO Field',                city:'Toronto',        state:'ON', country:'Canada', lat:43.6329, lng:-79.4186,  capacity:45000, tz:'America/Toronto' }
+];
+
+const VENUE_NAME_CN = {
+  azteca:'阿茲特克球場', bbva:'BBVA球場', akron:'阿克隆球場',
+  metlife:'大都會人壽球場', att:'AT&T球場', mercedes:'梅賽德斯-奔馳球場',
+  sofi:'SoFi球場', nrg:'NRG球場', arrowhead:'箭頭球場',
+  gillette:'吉列球場', levis:'李維斯球場', lumen:'流明球場',
+  lincoln:'林肯金融球場', hardrock:'硬石球場', bcplace:'BC Place', bmofield:'BMO球場'
+};
+function venueNameCN(venue){
+  if(!venue) return '';
+  const cn = VENUE_NAME_CN[venue.id] || '';
+  return cn ? cn + '（' + venue.name + '）' : venue.name;
+}
+const STATE_CN = {
+  'NJ':'新澤西州','TX':'得克薩斯州','GA':'佐治亞州','CA':'加利福尼亞州',
+  'MO':'密蘇里州','MA':'馬薩諸塞州','WA':'華盛頓州','PA':'賓夕法尼亞州',
+  'FL':'佛羅里達州','BC':'不列顛哥倫比亞省','ON':'安大略省'
+};
+function venueLocation(v){
+  if(!v)return'';
+  let loc=v.city;
+  if(v.state) loc+=', '+v.state+(STATE_CN[v.state]?'（'+STATE_CN[v.state]+'）':'');
+  loc+=', '+v.country;
+  return loc;
+}
+function venueNameShort(v){return v?VENUE_NAME_CN[v.id]||v.name:v.name;}
+
+// ==================== DATA (inline fallback, overridden by JSON on server) ====================
+let KNOCKOUT_MATCHES = [
+  {round:'Round of 32',mid:73,home:'South Africa',away:'Canada',hs:0,as:1,date:'2026-06-29',time:'03:00',venue:'sofi',status:'completed'},
+  {round:'Round of 32',mid:76,home:'Brazil',away:'Japan',hs:2,as:1,date:'2026-06-30',time:'01:00',venue:'nrg',status:'completed'},
+  {round:'Round of 32',mid:74,home:'Germany',away:'Paraguay',hs:1,as:1,date:'2026-06-30',time:'04:30',venue:'gillette',status:'completed'},
+  {round:'Round of 32',mid:75,home:'Netherlands',away:'Morocco',hs:1,as:1,date:'2026-06-30',time:'09:00',venue:'bbva',status:'completed'},
+  {round:'Round of 32',mid:78,home:'Ivory Coast',away:'Norway',hs:1,as:2,date:'2026-07-01',time:'01:00',venue:'att',status:'completed'},
+  {round:'Round of 32',mid:77,home:'France',away:'Sweden',hs:3,as:0,date:'2026-07-01',time:'05:00',venue:'metlife',status:'completed'},
+  {round:'Round of 32',mid:79,home:'Mexico',away:'Ecuador',hs:2,as:0,date:'2026-07-01',time:'10:00',venue:'azteca',status:'completed'},
+  {round:'Round of 32',mid:80,home:'England',away:'DR Congo',hs:null,as:null,date:'2026-07-02',time:'00:00',venue:'mercedes',status:'upcoming'},
+  {round:'Round of 32',mid:82,home:'Belgium',away:'Senegal',hs:null,as:null,date:'2026-07-02',time:'04:00',venue:'lumen',status:'upcoming'},
+  {round:'Round of 32',mid:81,home:'United States',away:'Bosnia & Herzegovina',hs:null,as:null,date:'2026-07-02',time:'08:00',venue:'levis',status:'upcoming'},
+  {round:'Round of 32',mid:84,home:'Spain',away:'Austria',hs:null,as:null,date:'2026-07-03',time:'03:00',venue:'sofi',status:'upcoming'},
+  {round:'Round of 32',mid:83,home:'Portugal',away:'Croatia',hs:null,as:null,date:'2026-07-03',time:'07:00',venue:'bmofield',status:'upcoming'},
+  {round:'Round of 32',mid:85,home:'Switzerland',away:'Algeria',hs:null,as:null,date:'2026-07-03',time:'11:00',venue:'bcplace',status:'upcoming'},
+  {round:'Round of 32',mid:88,home:'Australia',away:'Egypt',hs:null,as:null,date:'2026-07-04',time:'02:00',venue:'att',status:'upcoming'},
+  {round:'Round of 32',mid:86,home:'Argentina',away:'Cape Verde',hs:null,as:null,date:'2026-07-04',time:'06:00',venue:'hardrock',status:'upcoming'},
+  {round:'Round of 32',mid:87,home:'Colombia',away:'Ghana',hs:null,as:null,date:'2026-07-04',time:'09:30',venue:'arrowhead',status:'upcoming'},
+  {round:'Round of 16',mid:90,home:'W73',away:'W75',hs:null,as:null,date:'2026-07-05',time:'01:00',venue:'nrg',status:'upcoming'},
+  {round:'Round of 16',mid:89,home:'W74',away:'W77',hs:null,as:null,date:'2026-07-05',time:'05:00',venue:'lincoln',status:'upcoming'},
+  {round:'Round of 16',mid:91,home:'W76',away:'W78',hs:null,as:null,date:'2026-07-06',time:'04:00',venue:'metlife',status:'upcoming'},
+  {round:'Round of 16',mid:92,home:'W79',away:'W80',hs:null,as:null,date:'2026-07-06',time:'08:00',venue:'azteca',status:'upcoming'},
+  {round:'Round of 16',mid:93,home:'W83',away:'W84',hs:null,as:null,date:'2026-07-07',time:'03:00',venue:'att',status:'upcoming'},
+  {round:'Round of 16',mid:94,home:'W81',away:'W82',hs:null,as:null,date:'2026-07-07',time:'08:00',venue:'lumen',status:'upcoming'},
+  {round:'Round of 16',mid:95,home:'W86',away:'W88',hs:null,as:null,date:'2026-07-08',time:'00:00',venue:'mercedes',status:'upcoming'},
+  {round:'Round of 16',mid:96,home:'W85',away:'W87',hs:null,as:null,date:'2026-07-08',time:'04:00',venue:'bcplace',status:'upcoming'},
+  {round:'Quarter-Final',mid:97,home:'W89',away:'W90',hs:null,as:null,date:'2026-07-10',time:'04:00',venue:'gillette',status:'upcoming'},
+  {round:'Quarter-Final',mid:98,home:'W93',away:'W94',hs:null,as:null,date:'2026-07-11',time:'03:00',venue:'sofi',status:'upcoming'},
+  {round:'Quarter-Final',mid:99,home:'W91',away:'W92',hs:null,as:null,date:'2026-07-12',time:'05:00',venue:'hardrock',status:'upcoming'},
+  {round:'Quarter-Final',mid:100,home:'W95',away:'W96',hs:null,as:null,date:'2026-07-12',time:'09:00',venue:'arrowhead',status:'upcoming'},
+  {round:'Semi-Final',mid:101,home:'W97',away:'W98',hs:null,as:null,date:'2026-07-15',time:'03:00',venue:'att',status:'upcoming'},
+  {round:'Semi-Final',mid:102,home:'W99',away:'W100',hs:null,as:null,date:'2026-07-16',time:'03:00',venue:'mercedes',status:'upcoming'},
+  {round:'Third Place',mid:103,home:'L101',away:'L102',hs:null,as:null,date:'2026-07-19',time:'05:00',venue:'hardrock',status:'upcoming'},
+  {round:'Final',mid:104,home:'W101',away:'W102',hs:null,as:null,date:'2026-07-20',time:'03:00',venue:'metlife',status:'upcoming'}
+];
+
+let GROUP_RESULTS = [
+  {home:'Mexico',away:'South Africa',hs:2,as:0,venue:'azteca'},{home:'Korea Republic',away:'Czech Republic',hs:2,as:1,venue:'akron'},
+  {home:'Czech Republic',away:'South Africa',hs:1,as:1,venue:'bbva'},{home:'Mexico',away:'Korea Republic',hs:1,as:0,venue:'akron'},
+  {home:'Czech Republic',away:'Mexico',hs:0,as:3,venue:'azteca'},{home:'South Africa',away:'Korea Republic',hs:1,as:0,venue:'bbva'},
+  {home:'Canada',away:'Bosnia & Herzegovina',hs:1,as:1,venue:'bcplace'},{home:'Qatar',away:'Switzerland',hs:1,as:1,venue:'levis'},
+  {home:'Switzerland',away:'Bosnia & Herzegovina',hs:4,as:1,venue:'levis'},{home:'Canada',away:'Qatar',hs:6,as:0,venue:'bcplace'},
+  {home:'Switzerland',away:'Canada',hs:2,as:1,venue:'bcplace'},{home:'Bosnia & Herzegovina',away:'Qatar',hs:3,as:1,venue:'levis'},
+  {home:'United States',away:'Paraguay',hs:4,as:1,venue:'sofi'},{home:'Australia',away:'Turkey',hs:2,as:0,venue:'lumen'},
+  {home:'Turkey',away:'Paraguay',hs:0,as:1,venue:'levis'},{home:'United States',away:'Australia',hs:2,as:0,venue:'lumen'},
+  {home:'Turkey',away:'United States',hs:3,as:2,venue:'sofi'},{home:'Paraguay',away:'Australia',hs:0,as:0,venue:'levis'},
+  {home:'Brazil',away:'Morocco',hs:1,as:1,venue:'metlife'},{home:'Germany',away:'Curacao',hs:7,as:1,venue:'nrg'},
+  {home:'Brazil',away:'Haiti',hs:3,as:0,venue:'lincoln'},{home:'Ecuador',away:'Germany',hs:2,as:1,venue:'metlife'},
+  {home:'Morocco',away:'Haiti',hs:4,as:2,venue:'mercedes'},{home:'Scotland',away:'Brazil',hs:0,as:3,venue:'hardrock'},
+  {home:'Haiti',away:'Scotland',hs:0,as:1,venue:'gillette'},{home:'Germany',away:'Ivory Coast',hs:2,as:1,venue:'bmofield'},
+  {home:'Curacao',away:'Ivory Coast',hs:0,as:2,venue:'lincoln'},{home:'Ecuador',away:'Curacao',hs:0,as:0,venue:'arrowhead'},
+  {home:'Ivory Coast',away:'Ecuador',hs:1,as:0,venue:'lincoln'},{home:'Scotland',away:'Morocco',hs:0,as:1,venue:'gillette'},
+  {home:'Netherlands',away:'Japan',hs:2,as:2,venue:'att'},{home:'Sweden',away:'Tunisia',hs:5,as:1,venue:'bbva'},
+  {home:'Netherlands',away:'Sweden',hs:5,as:1,venue:'att'},{home:'Tunisia',away:'Japan',hs:0,as:4,venue:'bbva'},
+  {home:'Japan',away:'Sweden',hs:1,as:1,venue:'att'},{home:'Tunisia',away:'Netherlands',hs:3,as:1,venue:'arrowhead'},
+  {home:'France',away:'Senegal',hs:3,as:1,venue:'metlife'},{home:'Norway',away:'Senegal',hs:3,as:2,venue:'gillette'},
+  {home:'France',away:'Iraq',hs:3,as:0,venue:'metlife'},{home:'Iraq',away:'Norway',hs:1,as:4,venue:'gillette'},
+  {home:'Norway',away:'France',hs:1,as:4,venue:'gillette'},{home:'Senegal',away:'Iraq',hs:5,as:0,venue:'metlife'},
+  {home:'Portugal',away:'DR Congo',hs:1,as:1,venue:'nrg'},{home:'Ghana',away:'Panama',hs:1,as:0,venue:'bmofield'},
+  {home:'Portugal',away:'Uzbekistan',hs:5,as:0,venue:'nrg'},{home:'Uzbekistan',away:'Colombia',hs:1,as:3,venue:'hardrock'},
+  {home:'Panama',away:'Croatia',hs:0,as:1,venue:'bmofield'},{home:'Colombia',away:'DR Congo',hs:1,as:0,venue:'hardrock'},
+  {home:'Colombia',away:'Portugal',hs:0,as:0,venue:'hardrock'},{home:'DR Congo',away:'Uzbekistan',hs:3,as:1,venue:'nrg'},
+  {home:'Croatia',away:'Ghana',hs:2,as:1,venue:'lincoln'},{home:'Panama',away:'England',hs:0,as:2,venue:'metlife'},
+  {home:'England',away:'Croatia',hs:4,as:2,venue:'att'},{home:'Austria',away:'Jordan',hs:3,as:1,venue:'levis'},
+  {home:'Argentina',away:'Austria',hs:2,as:0,venue:'att'},{home:'Jordan',away:'Algeria',hs:1,as:2,venue:'levis'},
+  {home:'Algeria',away:'Austria',hs:3,as:3,venue:'arrowhead'},{home:'Jordan',away:'Argentina',hs:3,as:1,venue:'att'},
+  {home:'Argentina',away:'Algeria',hs:3,as:0,venue:'arrowhead'},{home:'England',away:'Ghana',hs:0,as:0,venue:'att'},
+  {home:'Spain',away:'Cape Verde',hs:0,as:0,venue:'mercedes'},{home:'Belgium',away:'Egypt',hs:1,as:1,venue:'lumen'},
+  {home:'Spain',away:'Saudi Arabia',hs:4,as:0,venue:'mercedes'},{home:'Uruguay',away:'Cape Verde',hs:2,as:2,venue:'hardrock'},
+  {home:'Uruguay',away:'Spain',hs:0,as:1,venue:'akron'},{home:'Cape Verde',away:'Saudi Arabia',hs:0,as:0,venue:'nrg'},
+  {home:'Egypt',away:'Iran',hs:1,as:1,venue:'lumen'},{home:'New Zealand',away:'Belgium',hs:1,as:5,venue:'bcplace'},
+  {home:'Belgium',away:'Iran',hs:0,as:0,venue:'sofi'},{home:'New Zealand',away:'Egypt',hs:1,as:3,venue:'bcplace'},
+  {home:'Saudi Arabia',away:'Uruguay',hs:1,as:1,venue:'hardrock'},{home:'Iran',away:'New Zealand',hs:2,as:2,venue:'lumen'}
+];
+
+// ==================== DATA LOADING (fetch from server, inline fallback) ====================
+async function loadData(){
+  // Tag internal fallback data so we can tell if it was updated
+  if (!KNOCKOUT_MATCHES._fromServer) {
+    KNOCKOUT_MATCHES._fromServer = false;
+  }
+  try {
+    const [koRes, grRes] = await Promise.all([
+      fetch('data/knockout-matches.json?t=' + Math.floor(Date.now()/3600000)),
+      fetch('data/group-results.json?t=' + Math.floor(Date.now()/3600000))
+    ]);
+    if (koRes.ok && grRes.ok) {
+      KNOCKOUT_MATCHES = await koRes.json();
+      KNOCKOUT_MATCHES._fromServer = true;
+      GROUP_RESULTS = await grRes.json();
+      console.log('✅ 已從服務器加載最新數據');
+      return true;
+    }
+  } catch(e) {
+    // fetch failed (eg. file:// protocol) — fall back to inline data
+    console.log('⚠️ 無法連接服務器，使用內聯數據');
+  }
+  // Return true always — inline data is always available
+  return true;
+}
+
+// ==================== HELPERS ====================
+function computeTeamRecord(team, results) {
+  let mp=0,w=0,d=0,l=0,gf=0,ga=0;
+  results.forEach(r=>{
+    if(r.home===team){mp++;gf+=r.hs;ga+=r.as;if(r.hs>r.as)w++;else if(r.hs===r.as)d++;else l++;}
+    else if(r.away===team){mp++;gf+=r.as;ga+=r.hs;if(r.as>r.hs)w++;else if(r.as===r.hs)d++;else l++;}
+  });
+  return {mp,w,d,l,gf,ga,gd:gf-ga,pts:w*3+d};
+}
+function getVenue(vid){return VENUES.find(v=>v.id===vid);}
+function flagUrl(team){return `https://flagcdn.com/w80/${COUNTRY_FLAGS[team]||'un'}.png`;}
+function teamDisplayName(m){
+  if(m.startsWith('W')){
+    const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
+    if(mm&&mm.status==='completed'){return mm.hs>mm.as?mm.home:mm.away;}
+    return '待定';
+  }
+  if(m.startsWith('L')){
+    const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
+    if(mm&&mm.status==='completed'){return mm.hs>mm.as?mm.away:mm.home;}
+    return '待定';
+  }
+  return m;
+}
+function isTeamResolved(m){return !m.startsWith('W')&&!m.startsWith('L');}
+function getResolvedTeamName(m){
+  if(!m.startsWith('W')&&!m.startsWith('L'))return m;
+  const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
+  if(mm&&mm.status==='completed'){return m.startsWith('W')?(mm.hs>mm.as?mm.home:mm.away):(mm.hs>mm.as?mm.away:mm.home);}
+  return null;
+}
+function getTeamFlagTeam(m){
+  const r=getResolvedTeamName(m);
+  return r||(isTeamResolved(m)?m:null);
+}
+function getTeamPlayedVenues(team){
+  const vids=new Set();
+  KNOCKOUT_MATCHES.forEach(m=>{
+    if(m.status==='completed'&&(m.home===team||m.away===team)) vids.add(m.venue);
+  });
+  return vids;
+}
+function getTeamNextMatch(team){
+  for(const m of KNOCKOUT_MATCHES){
+    if(m.status==='completed') continue;
+    if(m.home===team||m.away===team) return m;
+    if(m.home.startsWith('W')&&teamDisplayName(m.home)===team) return m;
+    if(m.away.startsWith('W')&&teamDisplayName(m.away)===team) return m;
+    if(m.home.startsWith('L')&&teamDisplayName(m.home)===team) return m;
+    if(m.away.startsWith('L')&&teamDisplayName(m.away)===team) return m;
+  }
+  return null;
+}
+
+function haversineKm(lat1,lng1,lat2,lng2){
+  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLng=(lng2-lng1)*Math.PI/180;
+  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return Math.round(R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
+}
+
+function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function bjToLocal(dateStr, timeStr, tz) {
+  try {
+    const bj = new Date(dateStr + 'T' + timeStr + ':00+08:00');
+    return bj.toLocaleTimeString('en-US', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+  } catch(e) { return ''; }
+}
+function bjToLocalDateTime(dateStr, timeStr, tz) {
+  try {
+    const bj = new Date(dateStr + 'T' + timeStr + ':00+08:00');
+    const date = bj.toLocaleDateString('zh-CN', { timeZone: tz, month: '2-digit', day: '2-digit', weekday: 'short' });
+    const time = bj.toLocaleTimeString('zh-CN', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false });
+    return date + ' ' + time;
+  } catch(e) { return ''; }
+}
+
+// ==================== BRACKET TREE ====================
+function getBracketTree() {
+  const byRound = {};
+  KNOCKOUT_MATCHES.forEach(m => { if(!byRound[m.round]) byRound[m.round]=[]; byRound[m.round].push(m); });
+
+  const consumed = new Set();
+  const r32Left = [], r32Right = [];
+  [89,90,91,92].forEach(rid => {
+    const m = KNOCKOUT_MATCHES.find(x=>x.mid===rid);
+    if(!m)return;
+    [m.home,m.away].forEach(ref=>{
+      const r=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(ref.slice(1)));
+      if(r&&!consumed.has(r.mid)){r32Left.push(r);consumed.add(r.mid);}
+    });
+  });
+  [93,94,95,96].forEach(rid => {
+    const m = KNOCKOUT_MATCHES.find(x=>x.mid===rid);
+    if(!m)return;
+    [m.home,m.away].forEach(ref=>{
+      const r=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(ref.slice(1)));
+      if(r&&!consumed.has(r.mid)){r32Right.push(r);consumed.add(r.mid);}
+    });
+  });
+
+  const r16Left=[89,90,91,92].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const r16Right=[93,94,95,96].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const qfLeft=[97,99].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const qfRight=[98,100].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const sfLeft=[101].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const sfRight=[102].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const finalMatch=KNOCKOUT_MATCHES.find(m=>m.round==='Final');
+  const thirdPlace=KNOCKOUT_MATCHES.find(m=>m.round==='Third Place');
+
+  return {r32Left,r32Right,r16Left,r16Right,qfLeft,qfRight,sfLeft,sfRight,finalMatch,thirdPlace};
+}
+
+function renderBracketTree() {
+  const container = document.getElementById('bracketScroll');
+  const tree = getBracketTree();
+  const roundCN = {'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
+
+  function matchCard(m) {
+    const sc=m.status, hw=sc==='completed'&&m.hs>m.as, aw=sc==='completed'&&m.as>m.hs;
+    const venue=getVenue(m.venue);
+    const ht=teamDisplayName(m.home), at=teamDisplayName(m.away);
+    const hFlag=getTeamFlagTeam(m.home), aFlag=getTeamFlagTeam(m.away);
+    return `<div class="bt-match ${sc}" onclick="onBracketMatchClick('${m.venue}','${m.mid}')" title="${m.date} ${m.time} (北京時間) | ${venue?venueNameCN(venue):''}">
+      ${sc==='completed'?'<span class="bt-status ft">FT</span>':sc==='live'?'<span class="bt-status live-tag">LIVE</span>':''}
+      <span class="bt-round-name">${roundCN[m.round]||m.round}</span>
+      <div class="bt-team">${hFlag?`<img class="bt-flag" src="${flagUrl(hFlag)}">`:''}<span class="bt-name">${esc(teamNameCN(ht))}</span><span class="bt-score ${sc==='completed'?(hw?'win':'loss'):'pending'}">${sc==='completed'?m.hs:'-'}</span></div>
+      <div class="bt-team">${aFlag?`<img class="bt-flag" src="${flagUrl(aFlag)}">`:''}<span class="bt-name">${esc(teamNameCN(at))}</span><span class="bt-score ${sc==='completed'?(aw?'win':'loss'):'pending'}">${sc==='completed'?m.as:'-'}</span></div>
+      <div class="bt-time">${m.date} ${m.time}</div>
+      <div class="bt-venue">📍 ${venue?venue.city:''}</div>
+    </div>`;
+  }
+
+  const rows=Math.max(tree.r32Left.length,tree.r32Right.length);
+  let html=`<div class="bracket-tree" id="bracketTree">
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.r32Left.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div><div class="bt-round-label">R16</div><div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.r16Left.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div><div class="bt-round-label">QF</div><div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.qfLeft.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div><div class="bt-round-label">SF</div><div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.sfLeft.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px;justify-content:center;gap:24px;">${tree.finalMatch?matchCard(tree.finalMatch):''}${tree.thirdPlace?matchCard(tree.thirdPlace):''}</div>
+    <div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.sfRight.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div><div class="bt-round-label">SF</div><div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.qfRight.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div><div class="bt-round-label">QF</div><div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.r16Right.map(matchCard).join('')}</div>
+    <div class="bt-gap"></div><div class="bt-round-label">R16</div><div class="bt-gap"></div>
+    <div class="bt-round" style="min-height:${rows*80}px">${tree.r32Right.map(matchCard).join('')}</div>
+  </div>`;
+  container.innerHTML=html;
+  setTimeout(drawBracketLines,50);
+  setTimeout(drawBracketLines,400); // redraw after images load
+}
+
+function drawBracketLines(){
+  const old=document.getElementById('bracketLinesSvg');if(old)old.remove();
+  const treeEl=document.getElementById('bracketTree');
+  if(!treeEl)return;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.id='bracketLinesSvg';
+  svg.style.cssText='position:absolute;top:0;left:0;pointer-events:none;z-index:0;overflow:visible;';
+  treeEl.insertBefore(svg,treeEl.firstChild);
+  // Set SVG size to match tree content
+  svg.setAttribute('width',treeEl.scrollWidth);
+  svg.setAttribute('height',treeEl.scrollHeight);
+  svg.setAttribute('viewBox',`0 0 ${treeEl.scrollWidth} ${treeEl.scrollHeight}`);
+  const rounds=treeEl.querySelectorAll('.bt-round');if(rounds.length<2)return;
+  const tree=getBracketTree();
+  function connect(idxL,idxR,ml,mr){
+    const cl=rounds[idxL],cr=rounds[idxR];if(!cl||!cr)return;
+    const lc=cl.querySelectorAll('.bt-match'),rc=cr.querySelectorAll('.bt-match');
+    for(let i=0;i<Math.min(rc.length,Math.floor(lc.length/2));i++){
+      const rce=rc[i],lc1=lc[i*2],lc2=lc[i*2+1];if(!lc1||!lc2)continue;
+      const rx=rce.offsetLeft,lx=lc1.offsetLeft+lc1.offsetWidth;
+      const lY1=lc1.offsetTop+lc1.offsetHeight/2,lY2=lc2.offsetTop+lc2.offsetHeight/2;
+      const rY=rce.offsetTop+rce.offsetHeight/2,mx=(lx+rx)/2,my=(lY1+lY2)/2;
+      const p=document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d',`M${lx},${lY1} H${mx} V${lY2} H${lx} M${mx},${my} H${rx}`);
+      p.setAttribute('stroke','var(--border)');p.setAttribute('stroke-width','1.2');p.setAttribute('fill','none');svg.appendChild(p);
+    }
+  }
+  connect(0,1,tree.r32Left,tree.r16Left);connect(1,2,tree.r16Left,tree.qfLeft);
+  connect(2,3,tree.qfLeft,tree.sfLeft);connect(8,7,tree.r32Right,tree.r16Right);
+  connect(7,6,tree.r16Right,tree.qfRight);connect(6,5,tree.qfRight,tree.sfRight);
+}
+
+function onBracketMatchClick(venueId,mid){
+  switchTab('schedule');
+  setTimeout(()=>showMatchOnMap(mid),350);
+}
+
+// ==================== SCHEDULE RENDERING ====================
+function renderSchedule(activeMid){
+  const c=document.getElementById('schedulePanel');
+  const days={};
+  KNOCKOUT_MATCHES.forEach(m=>{if(!days[m.date])days[m.date]=[];days[m.date].push(m);});
+  const dn=['週日','週一','週二','週三','週四','週五','週六'];
+  const roundLabels={'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
+  let html='';
+  Object.keys(days).sort().forEach(date=>{
+    const d=new Date(date+'T00:00:00+08:00');
+    html+=`<div class="day-header">📅 ${date} ${dn[d.getDay()]}</div>`;
+    days[date].sort((a,b)=>a.time.localeCompare(b.time)).forEach(m=>{
+      const venue=getVenue(m.venue),sc=m.status;
+      const localTime = venue ? bjToLocal(m.date, m.time, venue.tz) : '';
+      const hw=sc==='completed'&&m.hs>m.as,aw=sc==='completed'&&m.as>m.hs;
+      const activeClass=(activeMid==m.mid)?' active-match':'';
+      const hResolved=isTeamResolved(m.home),aResolved=isTeamResolved(m.away);
+      const hName=teamNameCN(teamDisplayName(m.home)),aName=teamNameCN(teamDisplayName(m.away));
+      html+=`<div class="match-card ${sc}${activeClass}" id="sched-${m.mid}" onclick="showMatchOnMap('${m.mid}')">
+        <div class="mc-header">
+          <span class="mc-round">${roundLabels[m.round]||m.round}</span>
+        </div>
+        <div class="mc-matchup">
+          ${hResolved?`<img class="mc-flag" src="${flagUrl(m.home)}" onclick="event.stopPropagation();showTeamDetail('${esc(m.home)}')">`:''}
+          <span class="mc-name" onclick="${hResolved?`event.stopPropagation();showTeamDetail('${esc(m.home)}')`:''}">${esc(hName)}</span>
+          <span class="mc-vs">vs</span>
+          ${aResolved?`<img class="mc-flag" src="${flagUrl(m.away)}" onclick="event.stopPropagation();showTeamDetail('${esc(m.away)}')">`:''}
+          <span class="mc-name" onclick="${aResolved?`event.stopPropagation();showTeamDetail('${esc(m.away)}')`:''}">${esc(aName)}</span>
+          <span class="mc-score-wrap" style="margin-left:auto;">
+            <span class="mc-score ${sc==='completed'?(hw?'win':'loss'):'pending'}">${sc==='completed'?m.hs:'-'}</span>
+            <span style="font-size:9px;color:var(--text-secondary);">-</span>
+            <span class="mc-score ${sc==='completed'?(aw?'win':'loss'):'pending'}">${sc==='completed'?m.as:'-'}</span>
+          </span>
+        </div>
+        <div class="mc-times">
+          <span class="mc-bj">🇨🇳 北京時間: ${m.date} ${m.time}</span>
+          ${venue?`<span class="mc-local">🕐 當地時間: ${localTime} (${venue.tz.split('/').pop().replace('_',' ')})</span>`:''}
+        </div>
+        <div class="mc-venue">📍 ${venue?venueNameShort(venue)+' · '+venueLocation(venue):''}</div>
+      </div>`;
+    });
+  });
+  c.innerHTML=html;
+}
+
+// ==================== TAB SWITCHING ====================
+function fitAllStadiums(){
+  // Disabled: user controls zoom and center manually, center must not shift
+  // if(!map)return;
+  // const bounds=L.latLngBounds(VENUES.map(v=>[v.lat,v.lng]));
+  // map.fitBounds(bounds.pad(0.08));
+}
+
+function switchTab(tab){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add('active');
+  document.getElementById('bracketView').style.display=tab==='bracket'?'flex':'none';
+  document.getElementById('scheduleView').style.display=tab==='schedule'?'flex':'none';
+  document.getElementById('supportView').style.display=tab==='support'?'flex':'none';
+  if(tab==='support')return;
+  if(tab==='bracket'){renderBracketTree();if(window._bracketResetView)setTimeout(window._bracketResetView,150);}
+  else {
+    const nearest=KNOCKOUT_MATCHES.find(m=>m.status!=='completed');
+    renderSchedule(nearest?nearest.mid:null);
+    if(!map){initMap();}
+    else{map.invalidateSize();}
+    setTimeout(()=>{
+      if(map){map.invalidateSize();}
+      if(nearest)showMatchOnMap(nearest.mid);
+    },200);
+  }
+}
+
+// ==================== MAP ====================
+let map,venueMarkers={},currentActiveMatch=null,currentHotelMarkers=[],currentWeatherPopups=[],currentArrowLayer=null;
+
+function createVenueMarker(v){
+  const finalsHere=KNOCKOUT_MATCHES.some(m=>m.venue===v.id&&(m.round==='Final'||m.round==='Third Place'));
+  const size=finalsHere?16:13;
+  return L.divIcon({
+    className:'custom-marker',
+    html:`<div style="width:${size}px;height:${size}px;background:#f0c040;border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px rgba(240,192,64,0.3);"></div>`,
+    iconSize:[size,size],iconAnchor:[size/2,size/2],popupAnchor:[size/2+4,size/2+4]
+  });
+}
+
+function initMap(){
+  // Commented: zoom control, debug info disabled per user request
+  map=L.map('map',{zoomControl:false,minZoom:4,maxZoom:6,zoomSnap:0.1,zoomDelta:0.5});
+
+  // OSM standard tiles with CSS invert filter for dark theme
+  // OSM is the most reliable tile source globally — no CDN/blocking issues
+  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom:18
+  }).addTo(map);
+
+  // Country borders (USA, Canada, Mexico) — distinct colors per country, heavy weight
+  fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
+    .then(r=>r.json())
+    .then(data=>{
+      const targetISO=['USA','CAN','MEX'];
+      const filtered={type:'FeatureCollection',features:data.features.filter(f=>targetISO.includes(f.properties.ISO_A3))};
+      const countryColors={
+        USA:{color:'#ff5555',fillColor:'#3d1515',weight:3,fillOpacity:0.12},
+        CAN:{color:'#ffaa00',fillColor:'#3d2800',weight:3,fillOpacity:0.12},
+        MEX:{color:'#44ff88',fillColor:'#0d3318',weight:3,fillOpacity:0.12}
+      };
+      L.geoJSON(filtered,{
+        style:feature=>{
+          const iso=feature.properties.ISO_A3;
+          return countryColors[iso]||{color:'#4a5568',weight:2,fillOpacity:0.1};
+        }
+      }).addTo(map);
+    }).catch(()=>{});
+
+  // US state borders — subtle lines, only visible at higher zooms
+  fetch('https://raw.githubusercontent.com/PublicaMundi/MappingAPI/master/data/geojson/us-states.json')
+    .then(r=>r.json())
+    .then(data=>{
+      L.geoJSON(data,{
+        style:{color:'#3a3f55',weight:0.8,fill:false,opacity:0.6,dashArray:'3 5'}
+      }).addTo(map);
+    }).catch(()=>{});
+
+  VENUES.forEach(v=>{
+    const marker=L.marker([v.lat,v.lng],{icon:createVenueMarker(v)}).addTo(map);
+    marker.bindPopup(`<div style="background:rgba(30,35,45,0.96);color:#e6edf3;font-family:-apple-system,sans-serif;padding:6px 8px;font-size:11px;border-radius:6px;min-width:200px;"><strong>${venueNameShort(v)}</strong><br><small>${v.name}</small><br>${venueLocation(v)}<br>容量: ${v.capacity.toLocaleString()}<br><span id="vp-weather-${v.id}" style="font-size:10px;color:#8b949e;">🌤️ 點擊加載天氣...</span><br><span id="vp-next-${v.id}" style="font-size:10px;color:#f0c040;"></span></div>`,{className:'venue-popup'});
+    marker.on('popupopen',async()=>{await loadVenuePopupInfo(v.id);});
+    venueMarkers[v.id]=marker;
+  });
+
+  // Initial view: user-calibrated center, all stadiums visible at zoom 4.5
+  map.setView([-42,-96],4.5,{animate:false});
+
+  updateMapMarkers();
+  map.on('zoomend',()=>{if(currentActiveMatch)updateGradientArrows();});
+  map.on('move',()=>{if(currentActiveMatch)updateGradientArrows();});
+
+  // Debug display: commented out per user request
+  // const dbgDiv=document.createElement('div');
+  // dbgDiv.id='map-debug';dbgDiv.style.cssText='position:absolute;top:10px;left:50px;background:rgba(0,0,0,0.85);color:#0f0;padding:4px 8px;font:11px monospace;border-radius:3px;z-index:9999;';
+  // document.getElementById('map').appendChild(dbgDiv);
+  // const updDbg=()=>{const c=map.getCenter();dbgDiv.innerHTML=`lat:${c.lat.toFixed(4)} lng:${c.lng.toFixed(4)} zoom:${map.getZoom().toFixed(1)}`;};
+  // map.on('move',updDbg);map.on('zoom',updDbg);updDbg();
+}
+
+function updateMapMarkers(){
+  VENUES.forEach(v=>{
+    const matches=KNOCKOUT_MATCHES.filter(m=>m.venue===v.id);
+    const hasLive=matches.some(m=>m.status==='live');
+    const hasCompleted=matches.every(m=>m.status==='completed');
+    const finalsHere=matches.some(m=>m.round==='Final'||m.round==='Third Place');
+    const color=hasLive?'#f0883e':hasCompleted?'#3fb950':finalsHere?'#58a6ff':'#8b949e';
+    const size=finalsHere?16:13;
+    if(venueMarkers[v.id]){
+      venueMarkers[v.id].setIcon(L.divIcon({
+        className:'custom-marker',
+        html:`<div style="width:${size}px;height:${size}px;background:${color};border:2px solid #fff;border-radius:50%;box-shadow:0 0 8px ${color}44;"></div>`,
+        iconSize:[size,size],iconAnchor:[size/2,size/2]
+      }));
+    }
+  });
+}
+
+// ==================== VENUE POPUP INFO (weather + next match) ====================
+async function loadVenuePopupInfo(vid){
+  const v=getVenue(vid);if(!v)return;
+
+  // Weather
+  const wel=document.getElementById('vp-weather-'+vid);
+  if(wel){
+    try{
+      const data=await wttrFetch(v);
+      let cw=data._source==='wttr'?parseWttrCurrent(data):parseOpenMeteoCurrent(data);
+      if(cw) wel.innerHTML=`🌡️ ${cw.temp}°C ${cw.desc} | 溼度 ${cw.hum}% | 💨 ${cw.wind}`;
+      else wel.innerHTML='天氣暫不可用';
+    }catch(e){wel.innerHTML='天氣加載失敗';}
+  }
+
+  // Next match at this venue
+  const nel=document.getElementById('vp-next-'+vid);
+  if(nel){
+    const next=KNOCKOUT_MATCHES.filter(m=>m.venue===vid&&m.status!=='completed')
+      .sort((a,b)=>a.date.localeCompare(b.date))[0];
+    if(next){
+      const localDT=bjToLocalDateTime(next.date,next.time,v.tz);
+      let fcText='';
+      try{
+        const data=await wttrFetch(v);
+        const localDateStr=new Date(next.date+'T'+next.time+':00+08:00').toLocaleDateString('en-CA',{timeZone:v.tz});
+        let fc=data._source==='wttr'?parseWttrForecast(data,localDateStr):parseOpenMeteoForecast(data,localDateStr);
+        if(fc) fcText=` | 預報: ${fc.desc} 🌡️${fc.low}°C~${fc.high}°C`;
+      }catch(e){}
+      const roundCN={'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
+      const hCN=teamNameCN(teamDisplayName(next.home)),aCN=teamNameCN(teamDisplayName(next.away));
+      nel.innerHTML=`📅 下一場: ${next.date} ${next.time} 北京 | 🕐 ${localDT}<br>⚽ ${roundCN[next.round]||next.round}: ${hCN} vs ${aCN}${fcText}`;
+    }
+  }
+}
+function clearMatchDisplay(){
+  currentActiveMatch=null;
+  currentHotelMarkers.forEach(mk=>map.removeLayer(mk));
+  currentHotelMarkers=[];
+  currentWeatherPopups.forEach(p=>map.removeLayer(p));
+  currentWeatherPopups=[];
+  if(currentArrowLayer){currentArrowLayer.remove();currentArrowLayer=null;}
+  // Clear active class from all schedule cards
+  document.querySelectorAll('.match-card.active-match').forEach(el=>el.classList.remove('active-match'));
+  fitAllStadiums();
+}
+
+function showMatchOnMap(mid){
+  clearMatchDisplay();
+  currentActiveMatch=mid;
+
+  const m=KNOCKOUT_MATCHES.find(x=>x.mid==mid);
+  if(!m)return;
+
+  const venue=getVenue(m.venue);
+  if(!venue)return;
+
+  // Highlight the schedule card
+  const card=document.getElementById(`sched-${mid}`);
+  if(card)card.classList.add('active-match');
+
+  // Determine which teams to show hotels for
+  const teamsToShow=[];
+  if(isTeamResolved(m.home))teamsToShow.push({team:m.home,isHome:true});
+  else{const tn=getResolvedTeamName(m.home);if(tn)teamsToShow.push({team:tn,isHome:true});}
+  if(isTeamResolved(m.away))teamsToShow.push({team:m.away,isHome:false});
+  else{const tn=getResolvedTeamName(m.away);if(tn)teamsToShow.push({team:tn,isHome:false});}
+
+  // Show hotel markers
+  teamsToShow.forEach(t=>{
+    const bc=BASE_CAMPS[t.team];
+    if(!bc)return;
+    const code=COUNTRY_FLAGS[t.team]||'un';
+    const icon=L.divIcon({
+      className:'hotel-marker',
+      html:`<div style="width:28px;height:20px;border:1.5px solid rgba(255,255,255,0.55);border-radius:3px;overflow:hidden;box-shadow:0 0 6px rgba(88,166,255,0.3);line-height:0;background:#000;" title="${t.team}: ${bc.city}">`+
+        `<img src="https://flagcdn.com/w80/${code}.png" style="width:28px;height:20px;display:block;" onerror="this.style.display='none';this.parentElement.innerHTML='<div style=width:28px;height:20px;background:#ff7b72;text-align:center;line-height:20px;font-size:12px>🏨</div>';">`+
+        `</div>`,
+      iconSize:[28,20],iconAnchor:[14,10],popupAnchor:[20,5]
+    });
+    const marker=L.marker([bc.lat,bc.lng],{icon}).addTo(map);
+
+    const hotelName = bc.hotel || 'Official Team Hotel';
+    const sourcesHTML = TEAM_SOURCE_LINKS.map(s =>
+      `<div style="padding:2px 0;"><a href="${s.url}" target="_blank" style="color:#58a6ff;text-decoration:none;font-size:10px;">• ${esc(s.label)}</a></div>`
+    ).join('');
+    marker.bindPopup(
+      `<div style="min-width:180px;padding:10px 12px;font-family:-apple-system,sans-serif;font-size:11px;color:#e6edf3;line-height:1.5;">
+        <div style="font-size:13px;font-weight:700;color:#f0c040;margin-bottom:6px;"><img src="${flagUrl(t.team)}" style="width:18px;height:12px;vertical-align:middle;margin-right:5px;">${esc(teamNameCN(t.team))}</div>
+        <div style="margin-bottom:4px;"><span style="color:#8b949e;">📍 Base Camp:</span> ${esc(bc.city)}</div>
+        <div style="margin-bottom:4px;"><span style="color:#8b949e;">🏨 Hotel:</span> ${esc(hotelName)}</div>
+        <div style="margin-top:8px;padding-top:6px;border-top:1px solid #30363d;font-size:10px;color:#8b949e;">
+          信源鏈接:<br>
+          ${sourcesHTML}
+        </div>
+      </div>`,
+      { className:'hotel-popup', maxWidth:280 }
+    );
+    currentHotelMarkers.push(marker);
+  });
+
+  // Draw gradient arrows from hotels to stadium
+  drawGradientArrows(teamsToShow,venue);
+
+  // Open venue popup + move map to venue
+  const vmarker=venueMarkers[venue.id];
+  if(vmarker){
+    vmarker.openPopup();
+    loadVenuePopupInfo(venue.id);
+  }
+  map.setView([venue.lat,venue.lng],5,{animate:true,duration:0.5});
+}
+
+function drawGradientArrows(teamsToShow,venue){
+  // Remove old SVG
+  const old=document.getElementById('arrowSvg');if(old)old.remove();
+  if(currentArrowLayer){currentArrowLayer.remove();currentArrowLayer=null;}
+
+  const mapEl=document.getElementById('map');
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.id='arrowSvg';svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:500;';
+  mapEl.appendChild(svg);
+  currentArrowLayer=svg;
+
+  function project(lat,lng){
+    const pt=map.latLngToContainerPoint([lat,lng]);
+    return {x:pt.x,y:pt.y};
+  }
+
+  updateGradientArrows=function(){
+    svg.innerHTML='';
+    teamsToShow.forEach(t=>{
+      const bc=BASE_CAMPS[t.team];if(!bc)return;
+      const from=project(bc.lat,bc.lng),to=project(venue.lat,venue.lng);
+      if(isNaN(from.x)||isNaN(to.x))return;
+      const dx=to.x-from.x,dy=to.y-from.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);if(dist<10)return;
+
+      const mx=(from.x+to.x)/2,my=(from.y+to.y)/2;
+      const off=Math.min(dist*0.3,70);
+      const cpx=mx-dy/dist*off,cpy=my+dx/dist*off;
+
+      // Draw 4 segments from thick to thin (hotel→stadium) — lighter + translucent
+      const widths=[4,3,2,1];
+      const opacities=[0.55,0.4,0.28,0.18];
+      const colors=['#7ab8e8','#8ec6ee','#a2d4f4','#b8dff8'];
+
+      for(let i=0;i<4;i++){
+        const t=i/(widths.length-1);
+        const fx=from.x+(to.x-from.x)*t,fy=from.y+(to.y-from.y)*t;
+        const segCpx=mx+(to.x-mx)*t,segCpy=my+(to.y-my)*t;
+
+        const path=document.createElementNS('http://www.w3.org/2000/svg','path');
+        path.setAttribute('d',`M${from.x},${from.y} Q${segCpx},${segCpy} ${to.x},${to.y}`);
+        path.setAttribute('stroke',colors[i]);
+        path.setAttribute('stroke-width',widths[i]);
+        path.setAttribute('fill','none');
+        path.setAttribute('opacity',opacities[i]);
+        path.setAttribute('stroke-linecap','round');
+        svg.appendChild(path);
+      }
+
+      // Arrowhead at stadium end
+      const angle=Math.atan2(to.y-cpy,to.x-cpx);
+      const alen=10;
+      const ax1=to.x-alen*Math.cos(angle-0.45),ay1=to.y-alen*Math.sin(angle-0.45);
+      const ax2=to.x-alen*Math.cos(angle+0.45),ay2=to.y-alen*Math.sin(angle+0.45);
+      const arrow=document.createElementNS('http://www.w3.org/2000/svg','polygon');
+      arrow.setAttribute('points',`${to.x},${to.y} ${ax1},${ay1} ${ax2},${ay2}`);
+      arrow.setAttribute('fill','#58a6ff');arrow.setAttribute('opacity','0.9');
+      svg.appendChild(arrow);
+    });
+  };
+  updateGradientArrows();
+}
+let updateGradientArrows=function(){};
+
+async function showStadiumWeather(venue,mid,match){
+  // Show weather popup near stadium (like what was in the team detail modal)
+  // First show loading
+  const popupLat=venue.lat+0.3; // slightly above stadium
+  const loadingIcon=L.divIcon({
+    className:'weather-popup',
+    html:`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:4px 8px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
+      `<span class="spinner" style="display:inline-block;vertical-align:middle;"></span> 加載天氣...</div>`,
+    iconSize:[0,0],iconAnchor:[60,-5]
+  });
+  const popup=L.marker([popupLat,venue.lng],{icon:loadingIcon,interactive:false}).addTo(map);
+  currentWeatherPopups.push(popup);
+
+  try{
+    const data=await wttrFetch(venue);
+    let cw;
+    if(data._source==='wttr'){
+      cw=parseWttrCurrent(data);
+    }else{
+      cw=parseOpenMeteoCurrent(data);
+    }
+
+    const matchKickoff=new Date(match.date+'T'+match.time+':00+08:00');
+    const diffMs=matchKickoff-Date.now();
+    const diffHours=diffMs/(3600000);
+    const diffDays=diffMs/(86400000);
+    const showForecast=diffHours>3&&diffDays<3;
+
+    let forecastText='';
+    if(showForecast){
+      const localDateStr=matchKickoff.toLocaleDateString('en-CA',{timeZone:venue.tz});
+      let fc;
+      if(data._source==='wttr'){fc=parseWttrForecast(data,localDateStr);}
+      else{fc=parseOpenMeteoForecast(data,localDateStr);}
+      if(fc){
+        forecastText=`<br><span style="color:#f0c040;">比賽日: ${fc.desc}</span> 🌡️ ${fc.low}°C~${fc.high}°C${fc.precip!=null?' 💧'+fc.precip+'%':''}`;
+      }
+    }
+    const localDT = bjToLocalDateTime(match.date, match.time, venue.tz);
+    const weatherHtml=`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
+      `<strong>${venueNameCN(venue)}</strong> ${cw?`🌡️ ${cw.temp}°C ${cw.desc}`:'天氣暫不可用'}`+
+      `<br><span style="color:#8b949e;">🕐 ${localDT}</span>`+
+      forecastText+
+      `</div>`;
+    popup.setIcon(L.divIcon({className:'weather-popup',html:weatherHtml,iconSize:[0,0],iconAnchor:[110,-5]}));
+  }catch(e){
+    popup.setIcon(L.divIcon({
+      className:'weather-popup',
+      html:`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;"><strong>${venueNameCN(venue)}</strong><br><span style="color:#8b949e;">天氣暫不可用</span></div>`,
+      iconSize:[0,0],iconAnchor:[80,-5]
+    }));
+  }
+}
+
+// ==================== TEAM DETAIL MODAL (tickets + played matches with weather) ====================
+async function showTeamDetail(team){
+  const record=computeTeamRecord(team,GROUP_RESULTS);
+  const flag=flagUrl(team);
+  const bc=BASE_CAMPS[team];
+  const roundCN={'Round of 32':'32強','Round of 16':'16強','Quarter-Final':'¼決賽','Semi-Final':'半決賽','Third Place':'三四名','Final':'決賽'};
+
+  // Get next match for same-stadium comparison
+  const nextMatch=getTeamNextMatch(team);
+  const nextStadiumVenue=nextMatch?getVenue(nextMatch.venue):null;
+
+  const completedKO=KNOCKOUT_MATCHES.filter(m=>m.status==='completed'&&(m.home===team||m.away===team));
+  const upcoming=KNOCKOUT_MATCHES.filter(m=>m.status!=='completed'&&(
+    m.home===team||m.away===team||(m.home.startsWith('W')&&teamDisplayName(m.home)===team)||
+    (m.away.startsWith('W')&&teamDisplayName(m.away)===team)||(m.home.startsWith('L')&&teamDisplayName(m.home)===team)||
+    (m.away.startsWith('L')&&teamDisplayName(m.away)===team)
+  ));
+
+  let html=`<div class="modal-header"><img class="flag-lg" src="${flag}"><span class="team-name">${teamNameCN(team)}</span>${bc?`<span class="hotel-info">🏨 ${bc.city}</span>`:''}<button class="modal-close" onclick="closeModal()">✕</button></div><div class="modal-body">`;
+
+  // Group stage matches — row by row
+  const groupMatches = GROUP_RESULTS.filter(r=>r.home===team||r.away===team);
+  html+=`<div class="modal-section"><h3>📊 小組賽戰績 (${record.w}勝${record.d}平${record.l}負 · ${record.gf}進${record.ga}失 · ${record.pts}分)</h3>`;
+  groupMatches.forEach(r=>{
+    const our=r.home===team?r.hs:r.as,their=r.home===team?r.as:r.hs;
+    const opp=r.home===team?r.away:r.home;
+    const result=our>their?'win':our<their?'loss':'draw';
+    const venue=getVenue(r.venue);
+    const sameStadium=nextStadiumVenue&&r.venue===nextStadiumVenue.id;
+    html+=`<div class="played-match-card${sameStadium?' same-stadium':''}">
+      <div class="pm-header">
+        <span class="pm-round">小組賽</span>
+        <span class="pm-date"><img class="bt-flag" src="${flagUrl(opp)}" style="width:14px;height:10px;vertical-align:middle;margin-right:3px;">${esc(teamNameCN(opp))}</span>
+      </div>
+      <div class="pm-result"><span>${esc(teamNameCN(team))}</span><span class="pm-score ${result}">${our} - ${their}</span></div>
+      <div class="pm-venue" style="${sameStadium?'color:#f0c040;font-weight:600;':''}">🏟️ ${venue?venueNameShort(venue):''} | ${venue?venueLocation(venue):''}${sameStadium?' <span class="same-stadium-badge">⭐ 下一場同場</span>':''}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // 🚆 Distances: hotel → stadium for upcoming matches
+  if(upcoming.length>0&&bc){
+    html+=`<div class="modal-section"><h3>🚆 行軍距離（酒店 → 球場）</h3>`;
+    upcoming.forEach(m=>{
+      const venue=getVenue(m.venue);
+      if(!venue)return;
+      const dist=haversineKm(bc.lat,bc.lng,venue.lat,venue.lng);
+      const oppCN=teamNameCN(teamDisplayName(m.home===team?m.away:m.home));
+      const opp=m.home===team?m.away:m.home;
+      const isResolved=isTeamResolved(opp);
+      html+=`<div class="ticket-card">
+        <div class="tc-header">🎫 ${roundCN[m.round]||m.round} · ${m.date} ${m.time} 北京時間${isResolved?` · vs ${teamNameCN(opp)}`:''}</div>
+        <div class="tc-route">
+          <div class="tc-from"><div class="tc-city">${bc.city.split(',')[0]}</div><div class="tc-sub">🏨 球隊酒店 · ${bc.city}</div></div>
+          <div class="tc-arrow">━▶</div>
+          <div class="tc-to"><div class="tc-city">${venue.city}</div><div class="tc-sub">🏟️ ${venueNameShort(venue)}</div></div>
+        </div>
+        <div class="tc-info">
+          <span>📏 <span class="tc-value">${dist} km</span></span>
+          <span>✈️ 約 <span class="tc-value">${Math.round(dist/800)}小時</span> 飛行</span>
+          <span>🚗 約 <span class="tc-value">${Math.round(dist/80)}小時</span> 駕車</span>
+        </div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // ✅ Played KO matches with weather + same-stadium highlight
+  if(completedKO.length>0){
+    html+=`<div class="modal-section"><h3>✅ 已完賽淘汰賽</h3>`;
+    completedKO.forEach(m=>{
+      const venue=getVenue(m.venue);
+      const opp=m.home===team?m.away:m.home;
+      const our=m.home===team?m.hs:m.as,their=m.home===team?m.as:m.hs;
+      const result=our>their?'win':our<their?'loss':'draw';
+      const sameStadium=nextStadiumVenue&&m.venue===nextStadiumVenue.id;
+
+      html+=`<div class="played-match-card${sameStadium?' same-stadium':''}" id="pm-${m.mid}">
+        <div class="pm-header">
+          <span class="pm-round">${roundCN[m.round]||m.round}</span>
+          <span class="pm-date">${m.date} ${m.time} 北京時間</span>
+        </div>
+        <div class="pm-result"><span>vs ${esc(teamNameCN(opp))}</span><span class="pm-score ${result}">${our} - ${their}</span></div>
+        <div class="pm-weather" id="pmw-${m.mid}"><span class="spinner"></span> 加載天氣...</div>
+        <div class="pm-venue" style="${sameStadium?'color:#f0c040;font-weight:600;':''}">🏟️ ${venue?venueNameShort(venue):''} | ${venue?venueLocation(venue):''}${sameStadium?' <span class="same-stadium-badge">⭐ 下一場同場</span>':''}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  html+=`</div>`;
+  document.getElementById('modal').innerHTML=html;
+  document.getElementById('modalOverlay').style.display='flex';
+
+  // Fetch historical weather for each played match
+  completedKO.forEach(m=>{
+    const venue=getVenue(m.venue);
+    if(!venue)return;
+    fetchHistoricalWeather(venue,m.date,m.mid);
+  });
+}
+
+function closeModal(){
+  document.getElementById('modalOverlay').style.display='none';
+}
+document.getElementById('modalOverlay').addEventListener('click',function(e){if(e.target===this)closeModal();});
+
+// ==================== WEATHER ====================
+if(!AbortSignal.timeout){AbortSignal.timeout=function(ms){const ctrl=new AbortController();setTimeout(()=>{try{ctrl.abort();}catch(e){}},ms);return ctrl.signal;};}
+
+const WEATHER_CACHE={};
+const HIST_WEATHER_CACHE={};
+
+async function wttrFetch(venue){
+  const cacheKey=`${venue.lat.toFixed(2)},${venue.lng.toFixed(2)}`;
+  if(WEATHER_CACHE[cacheKey]&&Date.now()-WEATHER_CACHE[cacheKey]._ts<600000)return WEATHER_CACHE[cacheKey];
+  const urls=[
+    `https://wttr.in/${venue.lat.toFixed(2)},${venue.lng.toFixed(2)}?format=j1&lang=zh`,
+    `https://api.open-meteo.com/v1/forecast?latitude=${venue.lat.toFixed(4)}&longitude=${venue.lng.toFixed(4)}&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode&current_weather=true&timezone=${encodeURIComponent(venue.tz)}&forecast_days=7`
+  ];
+  for(const url of urls){
+    try{const resp=await fetch(url,{signal:AbortSignal.timeout(8000)});if(!resp.ok)continue;const data=await resp.json();data._ts=Date.now();data._source=url.includes('wttr.in')?'wttr':'openmeteo';WEATHER_CACHE[cacheKey]=data;return data;}catch(e){}
+  }
+  throw new Error('All sources failed');
+}
+
+function weatherCN(desc){
+  if(!desc)return'--';
+  const m={
+    'Sunny':'晴','Clear':'晴','Partly cloudy':'少雲','Partly Cloudy':'少雲',
+    'Cloudy':'多雲','Overcast':'陰天','Mist':'霧','Fog':'霧','Foggy':'霧',
+    'Light drizzle':'小毛毛雨','Patchy light drizzle':'小毛毛雨',
+    'Light rain':'小雨','Light Rain':'小雨','Patchy light rain':'小雨','Patchy rain possible':'可能有陣雨',
+    'Moderate rain':'中雨','Moderate rain at times':'間歇中雨',
+    'Heavy rain':'大雨','Heavy rain at times':'間歇大雨',
+    'Light snow':'小雪','Moderate snow':'中雪','Heavy snow':'大雪',
+    'Patchy light snow':'小陣雪','Patchy moderate snow':'中陣雪',
+    'Thunderstorm':'雷暴','Thundery outbreaks possible':'可能有雷暴',
+    'Freezing fog':'凍霧','Ice pellets':'冰粒',
+    'Light rain shower':'小陣雨','Moderate or heavy rain shower':'大陣雨',
+    'Light sleet':'小凍雨','Moderate or heavy sleet':'大凍雨',
+    'Blizzard':'暴風雪','Blowing snow':'吹雪',
+    'Torrential rain shower':'暴雨',
+  };
+  for(const[k,v]of Object.entries(m)){if(desc.toLowerCase().includes(k.toLowerCase()))return v;}
+  return desc;
+}
+function parseWttrCurrent(data){const cc=data.current_condition&&data.current_condition[0];if(!cc||cc.temp_C==null)return null;return{temp:parseInt(cc.temp_C),desc:weatherCN((cc.weatherDesc&&cc.weatherDesc[0])?cc.weatherDesc[0].value:'')};}
+function parseWttrForecast(data,localDateStr){const w=data.weather||[];for(const day of w){if(day.date===localDateStr)return{desc:weatherCN((day.hourly&&day.hourly[4])?((day.hourly[4].weatherDesc&&day.hourly[4].weatherDesc[0])?day.hourly[4].weatherDesc[0].value:''):''),high:parseInt(day.maxtempC),low:parseInt(day.mintempC)};}return null;}
+function parseOpenMeteoCurrent(data){const cw=data.current_weather;if(!cw||cw.temperature==null||isNaN(cw.temperature))return null;const WC={0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'};return{temp:Math.round(cw.temperature),desc:WC[cw.weathercode]||`碼${cw.weathercode}`};}
+function parseOpenMeteoForecast(data,localDateStr){const d=data.daily;if(!d||!d.time)return null;const WC={0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'};for(let i=0;i<d.time.length;i++){if(d.time[i]===localDateStr)return{desc:WC[d.weathercode[i]]||`碼${d.weathercode[i]}`,high:Math.round(d.temperature_2m_max[i]),low:Math.round(d.temperature_2m_min[i]),precip:d.precipitation_probability_max[i]};}return null;}
+
+async function fetchHistoricalWeather(venue,dateStr,mid){
+  const el=document.getElementById(`pmw-${mid}`);
+  if(!el)return;
+
+  const cacheKey=`hist:${venue.lat.toFixed(2)},${venue.lng.toFixed(2)}:${dateStr}`;
+  if(HIST_WEATHER_CACHE[cacheKey]&&Date.now()-HIST_WEATHER_CACHE[cacheKey]._ts<3600000){
+    displayHistoricalWeather(el,HIST_WEATHER_CACHE[cacheKey]);
+    return;
+  }
+
+  // Use today's forecast for the same day if it's recent (<2 days)
+  const matchDate=new Date(dateStr+'T00:00:00-05:00');
+  const daysAgo=(Date.now()-matchDate)/(86400000);
+  if(daysAgo<2){
+    // Recent enough — use current forecast data as proxy
+    try{
+      const data=await wttrFetch(venue);
+      const localDateStr=matchDate.toLocaleDateString('en-CA',{timeZone:venue.tz});
+      let fc=data._source==='wttr'?parseWttrForecast(data,localDateStr):parseOpenMeteoForecast(data,localDateStr);
+      if(fc){HIST_WEATHER_CACHE[cacheKey]={...fc,_ts:Date.now()};displayHistoricalWeather(el,fc);return;}
+    }catch(e){}
+  }
+
+  // Try Open-Meteo archive
+  try{
+    const url=`https://archive-api.open-meteo.com/v1/archive?latitude=${venue.lat.toFixed(4)}&longitude=${venue.lng.toFixed(4)}&start_date=${dateStr}&end_date=${dateStr}&daily=temperature_2m_max,temperature_2m_min,weathercode&timezone=${encodeURIComponent(venue.tz)}`;
+    const resp=await fetch(url,{signal:AbortSignal.timeout(10000)});
+    if(resp.ok){
+      const data=await resp.json();
+      const d=data.daily;const WC={0:'晴',1:'大部晴',2:'少雲',3:'陰天',45:'霧',51:'小毛毛雨',53:'毛毛雨',55:'大毛毛雨',61:'小雨',63:'中雨',65:'大雨',71:'小雪',73:'中雪',75:'大雪',80:'陣雨',81:'中陣雨',82:'大陣雨',95:'雷暴',96:'雷暴+冰雹',99:'強雷暴+冰雹'};
+      if(d&&d.time&&d.time[0]===dateStr){
+        const fc={desc:WC[d.weathercode[0]]||`碼${d.weathercode[0]}`,high:Math.round(d.temperature_2m_max[0]),low:Math.round(d.temperature_2m_min[0]),_ts:Date.now()};
+        HIST_WEATHER_CACHE[cacheKey]=fc;displayHistoricalWeather(el,fc);return;
+      }
+    }
+  }catch(e){}
+
+  el.innerHTML='🌤️ 暫無歷史天氣數據';
+}
+
+function displayHistoricalWeather(el,fc){
+  el.innerHTML=`🌤️ 比賽日天氣: ${fc.desc} <span style="font-weight:600;">${fc.low}°C ~ ${fc.high}°C</span>`;
+}
+
+// ==================== AUTO UPDATE ====================
+function scheduleAutoUpdate(){
+  const fmt = d => d.toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  function showTime(){
+    document.getElementById('updateTime').textContent = `數據: ${fmt(new Date())}`;
+  }
+
+  // Calculate next data update time based on match schedule
+  function getNextScheduledUpdate(){
+    const now = new Date();
+    const candidates = [];
+
+    // Group uncompleted matches by date
+    const dateMap = {};
+    KNOCKOUT_MATCHES.forEach(m => {
+      if (m.status === 'completed') return;
+      const kickoff = new Date(m.date + 'T' + m.time + ':00+08:00');
+      // Pre-match update: 5 min before kickoff
+      const pre = new Date(kickoff.getTime() - 5 * 60000);
+      if (pre > now) candidates.push({ time: pre, label: '賽前' });
+
+      // Collect for daily summary
+      if (!dateMap[m.date]) dateMap[m.date] = [];
+      dateMap[m.date].push(m);
+    });
+
+    // Post-match daily summary: last match each day kickoff + 4h
+    Object.entries(dateMap).forEach(([date, matches]) => {
+      matches.sort((a, b) => a.time.localeCompare(b.time));
+      const last = matches[matches.length - 1];
+      const lastKickoff = new Date(date + 'T' + last.time + ':00+08:00');
+      const summary = new Date(lastKickoff.getTime() + 4 * 3600000);
+      if (summary > now) candidates.push({ time: summary, label: '每日彙總' });
+    });
+
+    candidates.sort((a, b) => a.time - b.time);
+    return candidates[0] || null;
+  }
+
+  // Hourly auto-refresh (independent of scheduled updates)
+  function hourlyRefresh(){
+    const now = new Date();
+    const next = new Date(now);
+    next.setMinutes(0, 0, 0);
+    next.setHours(next.getHours() + 1);
+    const ms = next - now;
+    setTimeout(async () => {
+      const ok = await loadData();
+      if (ok) {
+        applyAutoDetectLive();
+        updateStatusIndicators();
+        renderBracketTree();
+        updateMapMarkers();
+        if (document.getElementById('scheduleView').style.display !== 'none') renderSchedule();
+        if (document.getElementById('bracketView').style.display !== 'none') setTimeout(drawBracketLines, 200);
+      }
+      showTime();
+      updateNextDisplay();
+      hourlyRefresh();
+    }, ms);
+  }
+
+  function updateNextDisplay(){
+    const next = getNextScheduledUpdate();
+    if (next) {
+      document.getElementById('nextUpdate').textContent = `下次更新: ${fmt(next.time)}`;
+    } else {
+      document.getElementById('nextUpdate').textContent = '全部比賽已結束';
+    }
+  }
+
+  showTime();
+  updateNextDisplay();
+  hourlyRefresh();
+}
+
+function applyAutoDetectLive(){
+  const now = new Date();
+  KNOCKOUT_MATCHES.forEach(m => {
+    if (m.status === 'upcoming') {
+      const mdt = new Date(m.date + 'T' + m.time + ':00+08:00');
+      const mdtEnd = new Date(mdt.getTime() + 2.5 * 3600000);
+      if (now >= mdt && now <= mdtEnd && isTeamResolved(m.home) && isTeamResolved(m.away)) m.status = 'live';
+    }
+  });
+}
+function updateStatusIndicators(){
+  const hasLive=KNOCKOUT_MATCHES.some(m=>m.status==='live');
+  document.getElementById('liveBadge').style.display=hasLive?'inline':'none';
+  document.getElementById('updateTime').textContent=`數據: ${new Date().toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}`;
+}
+
+// ==================== INIT ====================
+let _bracketZoomInited = false;
+
+function initBracketZoom(){
+  if (_bracketZoomInited) return;
+  _bracketZoomInited = true;
+  const scrollEl=document.getElementById('bracketScroll');
+  if(!scrollEl)return;
+
+  let zoom=1, panX=0, panY=0;
+  let dragging=false, startX=0, startY=0, startPanX=0, startPanY=0;
+
+  function getTree(){return document.getElementById('bracketTree');}
+
+  function applyTransform(){
+    const t=getTree();if(!t)return;
+    t.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+  }
+
+  function resetView(){zoom=1;panX=0;panY=0;applyTransform();}
+
+  scrollEl.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const rect=scrollEl.getBoundingClientRect();
+    const mx=e.clientX-rect.left, my=e.clientY-rect.top;
+    const bx=(mx-panX)/zoom, by=(my-panY)/zoom;
+    const newZoom=Math.min(3,Math.max(0.3,zoom*(e.deltaY>0?0.9:1.1)));
+    panX=mx-bx*newZoom; panY=my-by*newZoom;
+    zoom=newZoom;
+    applyTransform();
+  },{passive:false});
+
+  scrollEl.addEventListener('mousedown',e=>{
+    if(e.button!==0)return;
+    dragging=true; scrollEl.classList.add('grabbing');
+    startX=e.clientX; startY=e.clientY;
+    startPanX=panX; startPanY=panY;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!dragging)return;
+    panX=startPanX+(e.clientX-startX);
+    panY=startPanY+(e.clientY-startY);
+    applyTransform();
+  });
+  window.addEventListener('mouseup',()=>{
+    if(dragging){dragging=false;scrollEl.classList.remove('grabbing');}
+  });
+
+  window._bracketResetView = ()=>{resetView();};
+  setTimeout(applyTransform,100);
+}
+
+async function initApp(){
+  // 1. Load data (fetch from server, fall back to inline)
+  await loadData();
+
+  // 2. Auto-detect live matches
+  applyAutoDetectLive();
+
+  // 3. Initial render
+  renderBracketTree();
+  updateStatusIndicators();
+  updateMapMarkers();
+
+  // 4. Bracket zoom + pan (once)
+  initBracketZoom();
+
+  // 5. Start auto-update timer
+  scheduleAutoUpdate();
+
+  // Redraw bracket lines on resize (browser zoom)
+  let resizeTimer;
+  window.addEventListener('resize',()=>{
+    clearTimeout(resizeTimer);
+    resizeTimer=setTimeout(()=>{
+      if(document.getElementById('bracketView').style.display!=='none') drawBracketLines();
+    },150);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
+</script>
+<!-- DISCLAIMER -->
+<div class="disclaimer-bar">
+  <div class="disclaimer-track">
+    <span>免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。</span>
+    <span>免責聲明：本站數據來源於互聯網公開信息，僅供球迷參考與可視化追蹤，不保證其完整性與準確性，亦不承擔由此產生的任何責任。</span>
+  </div>
+</div>
+</body>
+</html>

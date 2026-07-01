@@ -1,0 +1,9 @@
+# EdgeOne Pages 自定义响应头
+# 禁用 HTML 和 JSON 缓存，确保球迷看到最新数据
+/data/*.json
+  Cache-Control: public, max-age=60, s-maxage=60
+
+/*.html
+  Cache-Control: no-cache, no-store, must-revalidate
+  Pragma: no-cache
+  Expires: 0

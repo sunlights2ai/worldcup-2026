@@ -1384,7 +1384,7 @@ async function showStadiumWeather(venue,mid,match){
 
     if(isCompleted){
       // 已完赛：显示赛前天气快照（从localStorage或数据中提取）
-      const snapshotKey=`weather_${mid}`;
+      const snapshotKey=`weather:${mid}`;
       const snapshot=localStorage.getItem(snapshotKey);
       if(snapshot){
         const cw=JSON.parse(snapshot);
@@ -1416,7 +1416,7 @@ async function showStadiumWeather(venue,mid,match){
         
         // 保存天气快照到localStorage（用于已完赛后显示）
         if(cw){
-          localStorage.setItem(`weather_${mid}`,JSON.stringify(cw));
+          localStorage.setItem(`weather:${mid}`,JSON.stringify(cw));
         }
         
         let forecastText='';
@@ -1582,7 +1582,7 @@ async function fetchHistoricalWeather(venue,dateStr,mid){
   if(!el)return;
 
   // First try to load weather snapshot from localStorage
-  const snapshotKey=`weather_${mid}`;
+  const snapshotKey=`weather:${mid}`;
   const snapshot=localStorage.getItem(snapshotKey);
   if(snapshot){
     const cw=JSON.parse(snapshot);

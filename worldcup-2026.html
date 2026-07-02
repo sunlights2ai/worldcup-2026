@@ -80,6 +80,19 @@ body {
   flex: 1; width: 100%; overflow: hidden; min-height: 0; cursor: grab; position: relative;
 }
 .bracket-scroll.grabbing { cursor: grabbing; }
+/* Zoom controls (floating buttons) */
+.zoom-controls {
+  position: absolute; bottom: 12px; right: 16px; z-index: 10;
+  display: none; flex-direction: column; gap: 4px;
+}
+.zoom-btn {
+  width: 32px; height: 32px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg-card); color: var(--text); font-size: 16px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0.85; transition: opacity 0.15s;
+}
+.zoom-btn:hover { opacity: 1; border-color: var(--accent2); }
+.zoom-btn:active { background: var(--bg-hover); }
 .bracket-tree {
   display: flex; align-items: center; gap: 0; position: relative;
   height: fit-content; padding: 20px 12px; min-width: max-content;
@@ -364,7 +377,9 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
     padding: 4px 0 4px 0;
   }
   .bt-time-note { font-size: 9px; padding: 4px 0 2px 0; }
-  .bracket-scroll { touch-action: none; -webkit-overflow-scrolling: touch; }
+  .bracket-scroll { overflow: auto !important; cursor: default; -webkit-overflow-scrolling: touch; }
+  .bracket-scroll.grabbing { cursor: default; }
+  .zoom-controls { display: flex !important; }
   .bracket-tree { padding: 16px 8px; }
   .bt-round { width: 82px; }
   .bt-gap { width: 12px; }
@@ -442,7 +457,13 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
 <!-- BRACKET VIEW (full screen) -->
 <div class="bracket-fullscreen" id="bracketView">
   <div class="bt-time-note" data-i18n="timeNote">⏰ 以下比賽時間均爲北京時間 (UTC+8)</div>
-  <div class="bracket-scroll" id="bracketScroll"></div>
+  <div class="bracket-scroll" id="bracketScroll">
+    <div class="zoom-controls" id="zoomControls">
+      <button class="zoom-btn" onclick="bracketZoomIn()" title="Zoom In">＋</button>
+      <button class="zoom-btn" onclick="bracketZoomOut()" title="Zoom Out">－</button>
+      <button class="zoom-btn" onclick="bracketZoomReset()" title="Reset">↺</button>
+    </div>
+  </div>
 </div>
 
 <!-- SCHEDULE VIEW (split: list + map) -->
@@ -1920,20 +1941,30 @@ function initBracketZoom(){
 
   let zoom=1, panX=0, panY=0;
   let dragging=false, startX=0, startY=0, startPanX=0, startPanY=0;
-  // Touch pinch state
-  let pinchStartDist=0, pinchStartZoom=1, pinchCenterX=0, pinchCenterY=0;
+  const isMobile = () => window.innerWidth <= 768;
 
   function getTree(){return document.getElementById('bracketTree');}
 
   function applyTransform(){
     const t=getTree();if(!t)return;
-    t.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+    // On mobile, only apply scale (native scroll handles panning)
+    if(isMobile()){
+      t.style.transform=`scale(${zoom})`;
+      t.style.transformOrigin='0 0';
+    } else {
+      t.style.transform=`translate(${panX}px,${panY}px) scale(${zoom})`;
+    }
   }
 
-  function resetView(){zoom=1;panX=0;panY=0;applyTransform();}
+  function resetView(){
+    zoom=1;panX=0;panY=0;
+    if(isMobile()) scrollEl.scrollTo(0,0);
+    applyTransform();
+  }
 
-  // ===== Mouse events (desktop) =====
+  // ===== Desktop: wheel zoom =====
   scrollEl.addEventListener('wheel',e=>{
+    if(isMobile()) return; // mobile uses native scroll
     e.preventDefault();
     const rect=scrollEl.getBoundingClientRect();
     const mx=e.clientX-rect.left, my=e.clientY-rect.top;
@@ -1944,7 +1975,9 @@ function initBracketZoom(){
     applyTransform();
   },{passive:false});
 
+  // ===== Desktop: mouse drag pan =====
   scrollEl.addEventListener('mousedown',e=>{
+    if(isMobile()) return; // mobile uses native scroll
     if(e.button!==0)return;
     dragging=true; scrollEl.classList.add('grabbing');
     startX=e.clientX; startY=e.clientY;
@@ -1952,7 +1985,7 @@ function initBracketZoom(){
     e.preventDefault();
   });
   window.addEventListener('mousemove',e=>{
-    if(!dragging)return;
+    if(!dragging||isMobile())return;
     panX=startPanX+(e.clientX-startX);
     panY=startPanY+(e.clientY-startY);
     applyTransform();
@@ -1961,66 +1994,31 @@ function initBracketZoom(){
     if(dragging){dragging=false;scrollEl.classList.remove('grabbing');}
   });
 
-  // ===== Touch events (mobile) =====
-  scrollEl.addEventListener('touchstart',e=>{
-    if(e.touches.length===1){
-      // Single finger → start pan
-      dragging=true; scrollEl.classList.add('grabbing');
-      startX=e.touches[0].clientX; startY=e.touches[0].clientY;
-      startPanX=panX; startPanY=panY;
-      pinchStartDist=0; // cancel any active pinch
-    } else if(e.touches.length===2){
-      // Two fingers → start pinch zoom
-      dragging=false; scrollEl.classList.remove('grabbing');
-      const dx=e.touches[0].clientX-e.touches[1].clientX;
-      const dy=e.touches[0].clientY-e.touches[1].clientY;
-      pinchStartDist=Math.sqrt(dx*dx+dy*dy);
-      pinchStartZoom=zoom;
-      pinchCenterX=(e.touches[0].clientX+e.touches[1].clientX)/2;
-      pinchCenterY=(e.touches[0].clientY+e.touches[1].clientY)/2;
+  // ===== Zoom button functions (works on both desktop & mobile) =====
+  window.bracketZoomIn = function(){
+    const rect=scrollEl.getBoundingClientRect();
+    const cx=rect.width/2, cy=rect.height/2;
+    const newZoom=Math.min(3, zoom*1.25);
+    if(!isMobile()){
+      const bx=(cx-panX)/zoom, by=(cy-panY)/zoom;
+      panX=cx-bx*newZoom; panY=cy-by*newZoom;
     }
-    e.preventDefault();
-  },{passive:false});
+    zoom=newZoom;
+    applyTransform();
+  };
+  window.bracketZoomOut = function(){
+    const rect=scrollEl.getBoundingClientRect();
+    const cx=rect.width/2, cy=rect.height/2;
+    const newZoom=Math.max(0.3, zoom*0.8);
+    if(!isMobile()){
+      const bx=(cx-panX)/zoom, by=(cy-panY)/zoom;
+      panX=cx-bx*newZoom; panY=cy-by*newZoom;
+    }
+    zoom=newZoom;
+    applyTransform();
+  };
+  window.bracketZoomReset = ()=>{resetView();};
 
-  scrollEl.addEventListener('touchmove',e=>{
-    if(e.touches.length===1&&dragging){
-      // Single finger pan
-      panX=startPanX+(e.touches[0].clientX-startX);
-      panY=startPanY+(e.touches[0].clientY-startY);
-      applyTransform();
-    } else if(e.touches.length===2&&pinchStartDist>0){
-      // Two finger pinch zoom
-      const dx=e.touches[0].clientX-e.touches[1].clientX;
-      const dy=e.touches[0].clientY-e.touches[1].clientY;
-      const dist=Math.sqrt(dx*dx+dy*dy);
-      const rect=scrollEl.getBoundingClientRect();
-      const newZoom=Math.min(3,Math.max(0.3,pinchStartZoom*(dist/pinchStartDist)));
-      // Zoom toward pinch center
-      const bx=(pinchCenterX-rect.left-panX)/zoom;
-      const by=(pinchCenterY-rect.top-panY)/zoom;
-      panX=pinchCenterX-rect.left-bx*newZoom;
-      panY=pinchCenterY-rect.top-by*newZoom;
-      zoom=newZoom;
-      applyTransform();
-    }
-    if(e.touches.length===1||e.touches.length===2) e.preventDefault();
-  },{passive:false});
-
-  scrollEl.addEventListener('touchend',e=>{
-    if(e.touches.length===0){
-      dragging=false; scrollEl.classList.remove('grabbing');
-      pinchStartDist=0;
-    }
-    // If one finger remains after pinch → switch to pan
-    if(e.touches.length===1&&pinchStartDist>0){
-      pinchStartDist=0;
-      dragging=true; scrollEl.classList.add('grabbing');
-      startX=e.touches[0].clientX; startY=e.touches[0].clientY;
-      startPanX=panX; startPanY=panY;
-    }
-  });
-
-  window._bracketResetView = ()=>{resetView();};
   setTimeout(applyTransform,100);
 }
 

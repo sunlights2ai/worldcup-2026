@@ -115,6 +115,7 @@ body {
 .bt-score.pending { color: var(--text-secondary); }
 .bt-status { position: absolute; top: 2px; right: 4px; font-size: 7px; font-weight: 700; }
 .bt-status.ft { color: var(--win); }
+.bt-status.pen-tag { color: var(--accent); }
 .bt-status.live-tag { color: var(--live); }
 .bt-venue { font-size: 7px; color: var(--text-secondary); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bt-time { font-size: 7px; color: var(--text-secondary); margin-top: 1px; white-space: nowrap; }
@@ -679,13 +680,13 @@ const VENUES = [
 let KNOCKOUT_MATCHES = [
   {round:'Round of 32',mid:73,home:'South Africa',away:'Canada',hs:0,as:1,date:'2026-06-29',time:'03:00',venue:'sofi',status:'completed'},
   {round:'Round of 32',mid:76,home:'Brazil',away:'Japan',hs:2,as:1,date:'2026-06-30',time:'01:00',venue:'nrg',status:'completed'},
-  {round:'Round of 32',mid:74,home:'Germany',away:'Paraguay',hs:1,as:1,date:'2026-06-30',time:'04:30',venue:'gillette',status:'completed'},
-  {round:'Round of 32',mid:75,home:'Netherlands',away:'Morocco',hs:1,as:1,date:'2026-06-30',time:'09:00',venue:'bbva',status:'completed'},
+  {round:'Round of 32',mid:74,home:'Germany',away:'Paraguay',hs:1,as:1,pen:'3-4',winner:'Paraguay',date:'2026-06-30',time:'04:30',venue:'gillette',status:'completed'},
+  {round:'Round of 32',mid:75,home:'Netherlands',away:'Morocco',hs:1,as:1,pen:'2-3',winner:'Morocco',date:'2026-06-30',time:'09:00',venue:'bbva',status:'completed'},
   {round:'Round of 32',mid:78,home:'Ivory Coast',away:'Norway',hs:1,as:2,date:'2026-07-01',time:'01:00',venue:'att',status:'completed'},
   {round:'Round of 32',mid:77,home:'France',away:'Sweden',hs:3,as:0,date:'2026-07-01',time:'05:00',venue:'metlife',status:'completed'},
   {round:'Round of 32',mid:79,home:'Mexico',away:'Ecuador',hs:2,as:0,date:'2026-07-01',time:'10:00',venue:'azteca',status:'completed'},
-  {round:'Round of 32',mid:80,home:'England',away:'DR Congo',hs:null,as:null,date:'2026-07-02',time:'00:00',venue:'mercedes',status:'upcoming'},
-  {round:'Round of 32',mid:82,home:'Belgium',away:'Senegal',hs:null,as:null,date:'2026-07-02',time:'04:00',venue:'lumen',status:'upcoming'},
+  {round:'Round of 32',mid:80,home:'England',away:'DR Congo',hs:2,as:1,date:'2026-07-02',time:'00:00',venue:'mercedes',status:'completed'},
+  {round:'Round of 32',mid:82,home:'Belgium',away:'Senegal',hs:3,as:2,winner:'Belgium',date:'2026-07-02',time:'04:00',venue:'lumen',status:'completed'},
   {round:'Round of 32',mid:81,home:'United States',away:'Bosnia & Herzegovina',hs:null,as:null,date:'2026-07-02',time:'08:00',venue:'levis',status:'upcoming'},
   {round:'Round of 32',mid:84,home:'Spain',away:'Austria',hs:null,as:null,date:'2026-07-03',time:'03:00',venue:'sofi',status:'upcoming'},
   {round:'Round of 32',mid:83,home:'Portugal',away:'Croatia',hs:null,as:null,date:'2026-07-03',time:'07:00',venue:'bmofield',status:'upcoming'},
@@ -790,12 +791,15 @@ function flagUrl(team){return `https://flagcdn.com/w80/${COUNTRY_FLAGS[team]||'u
 function teamDisplayName(m){
   if(m.startsWith('W')){
     const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
-    if(mm&&mm.status==='completed'){return mm.hs>mm.as?mm.home:mm.away;}
+    if(mm&&mm.status==='completed'){return mm.winner||(mm.hs>mm.as?mm.home:mm.away);}
     return T('pending');
   }
   if(m.startsWith('L')){
     const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
-    if(mm&&mm.status==='completed'){return mm.hs>mm.as?mm.away:mm.home;}
+    if(mm&&mm.status==='completed'){
+      if(mm.winner){return mm.winner===mm.home?mm.away:mm.home;}
+      return mm.hs>mm.as?mm.away:mm.home;
+    }
     return T('pending');
   }
   return m;
@@ -804,7 +808,10 @@ function isTeamResolved(m){return !m.startsWith('W')&&!m.startsWith('L');}
 function getResolvedTeamName(m){
   if(!m.startsWith('W')&&!m.startsWith('L'))return m;
   const mm=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(m.slice(1)));
-  if(mm&&mm.status==='completed'){return m.startsWith('W')?(mm.hs>mm.as?mm.home:mm.away):(mm.hs>mm.as?mm.away:mm.home);}
+  if(mm&&mm.status==='completed'){
+    if(mm.winner){return m.startsWith('W')?mm.winner:(mm.winner===mm.home?mm.away:mm.home);}
+    return m.startsWith('W')?(mm.hs>mm.as?mm.home:mm.away):(mm.hs>mm.as?mm.away:mm.home);
+  }
   return null;
 }
 function getTeamFlagTeam(m){
@@ -895,12 +902,13 @@ function renderBracketTree() {
   const tree = getBracketTree();
 
   function matchCard(m) {
-    const sc=m.status, hw=sc==='completed'&&m.hs>m.as, aw=sc==='completed'&&m.as>m.hs;
+    const sc=m.status, hw=sc==='completed'&&((m.winner&&m.winner===m.home)||(m.hs>m.as)), aw=sc==='completed'&&((m.winner&&m.winner===m.away)||(m.as>m.hs));
     const venue=getVenue(m.venue);
     const ht=teamDisplayName(m.home), at=teamDisplayName(m.away);
     const hFlag=getTeamFlagTeam(m.home), aFlag=getTeamFlagTeam(m.away);
+    const statusLabel=sc==='completed'?(m.pen?`PEN(${m.pen})`:T('ft')):sc==='live'?'LIVE':'';
     return `<div class="bt-match ${sc}" onclick="onBracketMatchClick('${m.venue}','${m.mid}')" title="${m.date} ${m.time} (${T('beijingTime')}) | ${venue?venueName(venue):''}">
-      ${sc==='completed'?'<span class="bt-status ft">'+T('ft')+'</span>':sc==='live'?'<span class="bt-status live-tag">LIVE</span>':''}
+      ${statusLabel?`<span class="bt-status ${m.pen?'pen-tag':'ft'}">${statusLabel}</span>`:''}
       <span class="bt-round-name">${roundName(m.round)}</span>
       <div class="bt-team">${hFlag?`<img class="bt-flag" src="${flagUrl(hFlag)}">`:''}<span class="bt-name">${esc(teamName(ht))}</span><span class="bt-score ${sc==='completed'?(hw?'win':'loss'):'pending'}">${sc==='completed'?m.hs:'-'}</span></div>
       <div class="bt-team">${aFlag?`<img class="bt-flag" src="${flagUrl(aFlag)}">`:''}<span class="bt-name">${esc(teamName(at))}</span><span class="bt-score ${sc==='completed'?(aw?'win':'loss'):'pending'}">${sc==='completed'?m.as:'-'}</span></div>
@@ -984,10 +992,11 @@ function renderSchedule(activeMid){
     days[date].sort((a,b)=>a.time.localeCompare(b.time)).forEach(m=>{
       const venue=getVenue(m.venue),sc=m.status;
       const localTime = venue ? bjToLocal(m.date, m.time, venue.tz) : '';
-      const hw=sc==='completed'&&m.hs>m.as,aw=sc==='completed'&&m.as>m.hs;
+      const hw=sc==='completed'&&((m.winner&&m.winner===m.home)||(m.hs>m.as)),aw=sc==='completed'&&((m.winner&&m.winner===m.away)||(m.as>m.hs));
       const activeClass=(activeMid==m.mid)?' active-match':'';
       const hResolved=isTeamResolved(m.home),aResolved=isTeamResolved(m.away);
       const hName=teamName(teamDisplayName(m.home)),aName=teamName(teamDisplayName(m.away));
+      const penLabel=m.pen?`<span style="font-size:8px;color:var(--accent);margin-left:4px;">PEN(${m.pen})</span>`:'';
       html+=`<div class="match-card ${sc}${activeClass}" id="sched-${m.mid}" onclick="showMatchOnMap('${m.mid}')">
         <div class="mc-header">
           <span class="mc-round">${roundName(m.round)}</span>
@@ -1002,6 +1011,7 @@ function renderSchedule(activeMid){
             <span class="mc-score ${sc==='completed'?(hw?'win':'loss'):'pending'}">${sc==='completed'?m.hs:'-'}</span>
             <span style="font-size:9px;color:var(--text-secondary);">-</span>
             <span class="mc-score ${sc==='completed'?(aw?'win':'loss'):'pending'}">${sc==='completed'?m.as:'-'}</span>
+            ${penLabel}
           </span>
         </div>
         <div class="mc-times">

@@ -1589,15 +1589,18 @@ async function showStadiumWeather(venue,mid,match){
       const snapshot=localStorage.getItem(snapshotKey);
       if(snapshot){
         const cw=JSON.parse(snapshot);
-        weatherHtml=`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
-          `<strong>${venueName(venue)}</strong> 🌡️ ${cw.temp}°C ${cw.desc} | ${T('humidity')} ${cw.hum}% | 💨 ${cw.wind}`+
-          `<br><span style="color:#8b949e;">🕐 ${localDT}</span>`+
-          `</div>`;
+        weatherHtml=completedWeatherHTML(venue,localDT,cw);
       }else{
-        weatherHtml=`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
-          `<strong>${venueName(venue)}</strong><br><span style="color:#8b949e;">🕐 ${localDT}</span>`+
-          `<br><span style="color:#8b949e;">${T('noHistWeather')}</span>`+
-          `</div>`;
+        // Try JSON weather data (set by pre-match automation)
+        const matchData=KNOCKOUT_MATCHES.find(m=>m.mid===mid);
+        if(matchData&&matchData.weather){
+          weatherHtml=completedWeatherHTML(venue,localDT,matchData.weather);
+        }else{
+          weatherHtml=`<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
+            `<strong>${venueName(venue)}</strong><br><span style="color:#8b949e;">🕐 ${localDT}</span>`+
+            `<br><span style="color:#8b949e;">${T('noHistWeather')}</span>`+
+            `</div>`;
+        }
       }
     }else if(isLive){
       // 进行中：显示当前天气
@@ -1645,6 +1648,14 @@ async function showStadiumWeather(venue,mid,match){
       iconSize:[0,0],iconAnchor:[80,-5]
     }));
   }
+}
+
+// Shared weather HTML for completed matches
+function completedWeatherHTML(venue,localDT,cw){
+  return `<div style="background:rgba(22,27,34,0.95);border:1px solid #f0c040;border-radius:6px;padding:6px 10px;font-size:10px;color:#e6edf3;white-space:nowrap;font-family:-apple-system,BlinkMacSystemFont,'Noto Sans SC',sans-serif;">`+
+    `<strong>${venueName(venue)}</strong> 🌡️ ${cw.temp}°C ${cw.desc} | ${T('humidity')} ${cw.hum}% | 💨 ${cw.wind}`+
+    `<br><span style="color:#8b949e;">🕐 ${localDT}</span>`+
+    `</div>`;
 }
 
 // ==================== TEAM DETAIL MODAL (tickets + played matches with weather) ====================
@@ -1787,6 +1798,14 @@ async function fetchHistoricalWeather(venue,dateStr,mid){
   const snapshot=localStorage.getItem(snapshotKey);
   if(snapshot){
     const cw=JSON.parse(snapshot);
+    el.innerHTML=`🌡️ ${cw.temp}°C ${cw.desc} | ${T('humidity')} ${cw.hum}% | 💨 ${cw.wind}`;
+    return;
+  }
+
+  // Second try: JSON weather data (set by pre-match automation)
+  const matchData=KNOCKOUT_MATCHES.find(m=>m.mid===mid);
+  if(matchData&&matchData.weather){
+    const cw=matchData.weather;
     el.innerHTML=`🌡️ ${cw.temp}°C ${cw.desc} | ${T('humidity')} ${cw.hum}% | 💨 ${cw.wind}`;
     return;
   }

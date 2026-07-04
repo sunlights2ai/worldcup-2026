@@ -354,14 +354,13 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
 
 /* ===== MOBILE RESPONSIVE (≤768px) ===== */
 @media (max-width: 768px) {
-  /* Header — three rows: title+lang, update times, tabs */
+  /* Header — two rows: title+meta+lang on top, tabs on bottom */
   .header { height: auto; min-height: 0; padding: 4px 8px 0; flex-wrap: wrap; overflow: visible; }
   .header .title { font-size: 13px; order: 1; }
-  .lang-switch { order: 2; margin-left: auto; }
-  .lang-switch button { font-size: 10px; padding: 2px 6px; }
-  .header .meta { font-size: 9px; gap: 6px; flex-wrap: wrap; width: 100%; order: 3; margin-left: 0; margin-top: 1px; }
+  .header .meta { font-size: 9px; gap: 4px; flex-wrap: nowrap; margin-left: auto; order: 2; }
   .header .meta #updateTime { font-size: 9px; max-width: none; overflow: visible; white-space: nowrap; }
   .badge { font-size: 8px; padding: 1px 4px; }
+  .lang-switch button { font-size: 10px; padding: 2px 6px; }
 
   /* Tabs — full width second row */
   .tabs { margin-left: 0; width: 100%; order: 3; margin-top: 2px; }
@@ -373,7 +372,7 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
 
   /* Bracket view */
   .bracket-fullscreen {
-    height: calc(100vh - 72px - 18px);
+    height: calc(100vh - 62px - 18px);
     padding: 4px 0 4px 0;
   }
   .bt-time-note { font-size: 9px; padding: 4px 0 2px 0; }
@@ -392,7 +391,7 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
   /* Schedule + Map split → stacked */
   .split-container {
     flex-direction: column;
-    height: calc(100vh - 72px - 18px);
+    height: calc(100vh - 62px - 18px);
   }
   .schedule-panel {
     width: 100%; min-width: 0; max-height: 42%;
@@ -417,7 +416,7 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
   .modal-header .flag-lg { width: 26px; height: 18px; }
 
   /* Support view */
-  .support-container { height: calc(100vh - 72px - 18px); padding: 16px 10px; }
+  .support-container { height: calc(100vh - 62px - 18px); padding: 16px 10px; }
   .guide-card { padding: 20px 16px; }
   .guide-card h2 { font-size: 17px; }
   .guide-item { font-size: 11px; padding: 8px 0; }

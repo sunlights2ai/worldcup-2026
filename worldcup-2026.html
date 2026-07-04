@@ -804,10 +804,10 @@ let KNOCKOUT_MATCHES = [
   {round:'Round of 32',mid:81,home:'United States',away:'Bosnia & Herzegovina',hs:2,as:0,date:'2026-07-02',time:'08:00',venue:'levis',status:'completed'},
   {round:'Round of 32',mid:84,home:'Spain',away:'Austria',hs:3,as:0,winner:'Spain',date:'2026-07-03',time:'03:00',venue:'sofi',status:'completed'},
   {round:'Round of 32',mid:83,home:'Portugal',away:'Croatia',hs:2,as:1,winner:'Portugal',date:'2026-07-03',time:'07:00',venue:'bmofield',status:'completed'},
-  {round:'Round of 32',mid:85,home:'Switzerland',away:'Algeria',hs:null,as:null,date:'2026-07-03',time:'11:00',venue:'bcplace',status:'upcoming'},
+  {round:'Round of 32',mid:85,home:'Switzerland',away:'Algeria',hs:2,as:0,winner:'Switzerland',date:'2026-07-03',time:'11:00',venue:'bcplace',status:'completed'},
   {round:'Round of 32',mid:88,home:'Australia',away:'Egypt',hs:1,as:1,pen:'2-4',winner:'Egypt',date:'2026-07-04',time:'02:00',venue:'att',status:'completed'},
   {round:'Round of 32',mid:86,home:'Argentina',away:'Cape Verde',hs:3,as:2,winner:'Argentina',date:'2026-07-04',time:'06:00',venue:'hardrock',status:'completed'},
-  {round:'Round of 32',mid:87,home:'Colombia',away:'Ghana',hs:null,as:null,date:'2026-07-04',time:'09:30',venue:'arrowhead',status:'upcoming',weather:{temp:32,hum:56,wind:'19km/h',desc:'晴',code:0,time:'2026-07-04T09:25:11+08:00'}},
+  {round:'Round of 32',mid:87,home:'Colombia',away:'Ghana',hs:1,as:0,winner:'Colombia',date:'2026-07-04',time:'09:30',venue:'arrowhead',status:'completed'},
   {round:'Round of 16',mid:90,home:'W73',away:'W75',hs:null,as:null,date:'2026-07-05',time:'01:00',venue:'nrg',status:'upcoming'},
   {round:'Round of 16',mid:89,home:'W74',away:'W77',hs:null,as:null,date:'2026-07-05',time:'05:00',venue:'lincoln',status:'upcoming'},
   {round:'Round of 16',mid:91,home:'W76',away:'W78',hs:null,as:null,date:'2026-07-06',time:'04:00',venue:'metlife',status:'upcoming'},
@@ -1394,10 +1394,10 @@ async function showMatchOnMap(mid){
 
   // Determine which teams to show hotels for
   const teamsToShow=[];
-  if(isTeamResolved(m.home))teamsToShow.push({team:m.home,isHome:true});
-  else{const tn=getResolvedTeamName(m.home);if(tn)teamsToShow.push({team:tn,isHome:true});}
-  if(isTeamResolved(m.away))teamsToShow.push({team:m.away,isHome:false});
-  else{const tn=getResolvedTeamName(m.away);if(tn)teamsToShow.push({team:tn,isHome:false});}
+  const homeTeam=getResolvedTeamName(m.home);
+  if(homeTeam)teamsToShow.push({team:homeTeam,isHome:true});
+  const awayTeam=getResolvedTeamName(m.away);
+  if(awayTeam)teamsToShow.push({team:awayTeam,isHome:false});
 
   // Show hotel markers
   teamsToShow.forEach(t=>{

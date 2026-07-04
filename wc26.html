@@ -361,7 +361,6 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
   .lang-switch button { font-size: 10px; padding: 2px 6px; }
   .header .meta { font-size: 9px; gap: 6px; flex-wrap: wrap; width: 100%; order: 3; margin-left: 0; margin-top: 1px; }
   .header .meta #updateTime { font-size: 9px; max-width: none; overflow: visible; white-space: nowrap; }
-  .header .meta #nextUpdate { font-size: 9px; display: inline; }
   .badge { font-size: 8px; padding: 1px 4px; }
 
   /* Tabs — full width second row */
@@ -450,7 +449,6 @@ img.leaflet-tile { filter: invert(0.92) hue-rotate(180deg) brightness(0.45) cont
   <div class="meta">
     <span class="badge live" id="liveBadge">🔴 LIVE</span>
     <span id="updateTime"></span>
-    <span id="nextUpdate"></span>
     <span class="lang-switch"><button data-lang="zh-TW" onclick="setLang('zh-TW')">繁</button><button data-lang="zh-CN" onclick="setLang('zh-CN')">简</button><button data-lang="en" onclick="setLang('en')">EN</button></span>
   </div>
 </div>
@@ -1901,14 +1899,6 @@ function showUpdateTime() {
   // Use ESPN update time if more recent than JSON
   const lu = _espnUpdated || KNOCKOUT_MATCHES._lastUpdated || _lastFetchedUpdated;
   document.getElementById('updateTime').textContent = formatLastUpdated(lu, currentLang);
-
-  const next = calculateNextUpdateTime();
-  const el = document.getElementById('nextUpdate');
-  if (next) {
-    el.textContent = `${T('nextUpdateLabel')}: ${formatDateTime(next, currentLang)}`;
-  } else {
-    el.textContent = T('nextUpdateNone');
-  }
 }
 
 async function autoPoll() {

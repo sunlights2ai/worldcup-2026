@@ -1,5 +1,5 @@
 {
-  "lastUpdated": "2026-07-04T09:25:11+08:00",
+  "lastUpdated": "2026-07-04T11:30:22+08:00",
   "matches": [
   { "round": "Round of 32", "mid": 73, "home": "South Africa", "away": "Canada",                 "hs": 0, "as": 1, "date": "2026-06-29", "time": "03:00", "venue": "sofi",     "status": "completed" },
   { "round": "Round of 32", "mid": 76, "home": "Brazil",       "away": "Japan",                  "hs": 2, "as": 1, "date": "2026-06-30", "time": "01:00", "venue": "nrg",      "status": "completed" },
@@ -16,7 +16,7 @@
   { "round": "Round of 32", "mid": 85, "home": "Switzerland",  "away": "Algeria",                "hs": 2, "as": 0, "winner": "Switzerland", "date": "2026-07-03", "time": "11:00", "venue": "bcplace",  "status": "completed", "weather": {"temp":14,"hum":96,"wind":"9km/h","desc":"密集毛毛雨","code":55,"time":"2026-07-03T10:55:09+08:00"} },
   { "round": "Round of 32", "mid": 88, "home": "Australia",    "away": "Egypt",                  "hs": 1, "as": 1, "pen": "2-4", "winner": "Egypt", "date": "2026-07-04", "time": "02:00", "venue": "att",      "status": "completed" },
   { "round": "Round of 32", "mid": 86, "home": "Argentina", "away": "Cape Verde", "hs": 3, "as": 2, "winner": "Argentina", "date": "2026-07-04", "time": "06:00", "venue": "hardrock", "status": "completed", "weather": {"temp":30,"hum":59,"wind":"8km/h","desc":"小毛毛雨","code":51,"time":"2026-07-04T05:55+08:00"} },
-  { "round": "Round of 32", "mid": 87, "home": "Colombia",     "away": "Ghana",                  "hs": null, "as": null, "date": "2026-07-04", "time": "09:30", "venue": "arrowhead", "status": "upcoming", "weather": {"temp":32,"hum":56,"wind":"19km/h","desc":"晴","code":0,"time":"2026-07-04T09:25:11+08:00"} },
+  { "round": "Round of 32", "mid": 87, "home": "Colombia",     "away": "Ghana",                  "hs": 1, "as": 0, "winner": "Colombia", "date": "2026-07-04", "time": "09:30", "venue": "arrowhead", "status": "completed", "weather": {"temp":32,"hum":56,"wind":"19km/h","desc":"晴","code":0,"time":"2026-07-04T09:25:11+08:00"} },
   { "round": "Round of 16",  "mid": 90, "home": "W73", "away": "W75", "hs": null, "as": null, "date": "2026-07-05", "time": "01:00", "venue": "nrg",      "status": "upcoming" },
   { "round": "Round of 16",  "mid": 89, "home": "W74", "away": "W77", "hs": null, "as": null, "date": "2026-07-05", "time": "05:00", "venue": "lincoln",  "status": "upcoming" },
   { "round": "Round of 16",  "mid": 91, "home": "W76", "away": "W78", "hs": null, "as": null, "date": "2026-07-06", "time": "04:00", "venue": "metlife",  "status": "upcoming" },

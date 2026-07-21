@@ -1012,27 +1012,11 @@ function fmtDisplayTimeLabelFirst(dateStr, timeStr, venueTz) {
 
 // ==================== BRACKET TREE ====================
 function getBracketTree() {
-  const byRound = {};
-  KNOCKOUT_MATCHES.forEach(m => { if(!byRound[m.round]) byRound[m.round]=[]; byRound[m.round].push(m); });
-
-  const consumed = new Set();
-  const r32Left = [], r32Right = [];
-  [89,90,91,92].forEach(rid => {
-    const m = KNOCKOUT_MATCHES.find(x=>x.mid===rid);
-    if(!m)return;
-    [m.home,m.away].forEach(ref=>{
-      const r=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(ref.slice(1)));
-      if(r&&!consumed.has(r.mid)){r32Left.push(r);consumed.add(r.mid);}
-    });
-  });
-  [93,94,95,96].forEach(rid => {
-    const m = KNOCKOUT_MATCHES.find(x=>x.mid===rid);
-    if(!m)return;
-    [m.home,m.away].forEach(ref=>{
-      const r=KNOCKOUT_MATCHES.find(x=>x.mid===parseInt(ref.slice(1)));
-      if(r&&!consumed.has(r.mid)){r32Right.push(r);consumed.add(r.mid);}
-    });
-  });
+  // R32 match IDs in bracket order (left side feeds R16 #89-#92, right side feeds #93-#96)
+  const r32LeftIds  = [74, 77, 73, 75, 76, 78, 79, 80];
+  const r32RightIds = [83, 84, 81, 82, 86, 88, 85, 87];
+  const r32Left  = r32LeftIds.map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
+  const r32Right = r32RightIds.map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
 
   const r16Left=[89,90,91,92].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
   const r16Right=[93,94,95,96].map(id=>KNOCKOUT_MATCHES.find(m=>m.mid===id)).filter(Boolean);
